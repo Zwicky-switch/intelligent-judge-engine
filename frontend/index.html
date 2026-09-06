@@ -152,6 +152,7 @@
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "请求失败");
       renderResult(data);
+      clearFileInputs();  // 上传成功后清空所有文件选择框，不留上一次痕迹
       $("msg").innerHTML = '<span class="ok">分析完成</span>';
     } catch (err) {
       $("msg").innerHTML = '<span class="err">错误：' + err.message + '</span>';
@@ -159,6 +160,14 @@
       $("submitBtn").disabled = false;
     }
   });
+
+  // 清空所有文件选择框和文件名显示，消除上一次上传痕迹
+  function clearFileInputs() {
+    ["image", "audio", "video"].forEach((key) => {
+      $(key).value = "";          // 清空文件输入框
+      $(key + "Name").textContent = "";  // 清空文件名显示
+    });
+  }
 
   function renderResult(d) {
     $("resultCard").style.display = "block";
