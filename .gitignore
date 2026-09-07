@@ -216,3 +216,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# ---------- 智评 Insight ----------
+node_modules/
+/frontend/dist/
+/backend/data/
+*.db
+*.sqlite3

@@ -1,0 +1,114 @@
+/* ============================================================
+   智评 Insight — 全局设计层
+   说明: 只做视觉统一/精修, 不改变任何组件结构或交互逻辑。
+   类名(.page/.card/.muted/…) 与既有页面用法完全兼容。
+   ============================================================ */
+
+:root {
+  /* 品牌蓝(与既有 #2f7cd6 → #55b0ff 一系) */
+  --brand-1: #2f7cd6;
+  --brand-2: #55a4ff;
+
+  /* 中性底 */
+  --bg: #f4f6fa;
+  --border-soft: #eef1f6;
+  --ink: #20262f;
+  --ink-2: #5a6472;
+  --muted: #9098a3;
+
+  /* Element Plus 基础圆角 -> 更柔和现代(输入/按钮/弹层全局生效) */
+  --el-border-radius-base: 8px;
+  --el-border-radius-small: 6px;
+  --el-border-radius-round: 20px;
+}
+
+* { box-sizing: border-box; }
+html, body, #app { height: 100%; margin: 0; }
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  font-family: 'Inter', 'Helvetica Neue', Helvetica, 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif;
+  background:
+    radial-gradient(1100px 420px at 85% -10%, rgba(47, 124, 214, .06), transparent 60%),
+    radial-gradient(900px 380px at -10% 110%, rgba(85, 164, 255, .05), transparent 55%),
+    var(--bg);
+  background-attachment: fixed;
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+a { text-decoration: none; color: var(--brand-1); }
+
+/* 页内布局与通用卡片 —— 与既有用法一致, 视觉升级 */
+.page { padding: 20px 22px 26px; }
+.card {
+  background: #fff;
+  border: 1px solid var(--border-soft);
+  border-radius: 14px;
+  padding: 20px 22px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 2px rgba(16, 42, 74, .03), 0 8px 24px -18px rgba(16, 42, 74, .14);
+}
+
+.muted { color: var(--muted); }
+.mono { font-family: Consolas, Menlo, monospace; font-size: 12px; }
+
+pre.json {
+  white-space: pre-wrap; word-break: break-all;
+  background: #f6f8fb; border: 1px solid #eef1f6;
+  border-radius: 8px; padding: 10px 12px; font-size: 12px; line-height: 1.7;
+  max-height: 260px; overflow: auto;
+}
+
+/* 证据高亮(作答原文) */
+.evidence-text { line-height: 1.9; font-size: 14px; white-space: pre-wrap; }
+.evidence-text mark { background: #ffe58f; padding: 0 2px; border-radius: 2px; }
+
+/* 统计卡组 */
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; }
+.stat-card {
+  position: relative;
+  background: linear-gradient(180deg, #fff, #fbfcfe);
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  padding: 16px 18px;
+  box-shadow: 0 1px 2px rgba(16, 42, 74, .04), 0 6px 16px -14px rgba(16, 42, 74, .12);
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+.stat-card:hover { transform: translateY(-1px); box-shadow: 0 3px 6px rgba(16,42,74,.05), 0 12px 22px -14px rgba(47,124,214,.28); }
+.stat-card .lbl { color: var(--muted); font-size: 13px; }
+.stat-card .num {
+  font-size: 28px; font-weight: 800; margin-top: 6px; line-height: 1.1;
+  letter-spacing: -.4px; font-variant-numeric: tabular-nums;
+}
+
+/* Element Plus 局部观感统一(全局类, 直接作用于组件) */
+.el-table .el-table__header th.el-table__cell {
+  background: #f8fafc;
+  color: #4a5464;
+  font-weight: 600;
+}
+.el-table__body tr:hover > td.el-table__cell { background: #f5f9ff; }
+.el-table__row { --el-table-row-hover-bg-color: #f5f9ff; }
+.el-card { --el-card-border-radius: 12px; }
+.el-dialog { --el-dialog-border-radius: 12px; }
+.el-drawer { --el-drawer-padding: 20px; }
+.el-tag { border-radius: 6px; }
+.el-button { font-weight: 500; }
+
+/* 滚动条 / 选区 / 焦点 */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb {
+  background: #ccd4df; border-radius: 8px;
+  border: 2px solid transparent; background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover { background: #aeb8c6; border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-track { background: transparent; }
+::selection { background: rgba(47, 124, 214, .22); }
+
+/* 路由进入过渡: 轻微上浮淡入, 不加高度跳变 */
+.fade-enter-active, .fade-leave-active { transition: opacity .16s ease, transform .16s ease; }
+.fade-enter-from { opacity: 0; transform: translateY(6px); }
+.fade-leave-to { opacity: 0; transform: translateY(-4px); }
