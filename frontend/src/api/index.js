@@ -21,6 +21,7 @@ export const createItem = (data) => http.post('/items', data)
 export const updateItem = (id, data) => http.put(`/items/${id}`, data)
 export const publishItem = (id, comment) => http.post(`/items/${id}/publish`, null, { params: { comment: comment || undefined } })
 export const toggleItem = (id, enabled) => http.post(`/items/${id}/toggle`, null, { params: { enabled } })
+export const deleteItem = (id) => http.delete(`/items/${id}`)
 // 版本快照 / 比较 / 发布复核状态(M10)
 export const itemVersions = (id) => http.get(`/items/${id}/versions`)
 export const itemVersion = (id, v) => http.get(`/items/${id}/versions/${v}`)
@@ -40,6 +41,10 @@ export const practiceItems = (params) => http.get('/practice/items', { params })
 export const submitAnswer = (data) => http.post('/answers', data)
 // 口语录音上传契约(M4): multipart form = { item_id, content(转写), asr_note?, audio }
 export const submitAnswerAudio = (formData) => http.post('/answers/audio', formData)
+// 图片作答(识图转文字): multipart form = { item_id, image }
+export const submitAnswerImage = (formData) => http.post('/answers/image', formData)
+// 视频作答(基础版): multipart form = { item_id, video }
+export const submitAnswerVideo = (formData) => http.post('/answers/video', formData)
 export const studentOverview = (token) => http.get(`/scores/overview/${token}`)
 export const listScores = (params) => http.get('/scores', { params })
 export const getScore = (id) => http.get(`/scores/${id}`)
@@ -63,10 +68,10 @@ export default {
   login, me, listCourses, courseKnowledge, listDimensions, abilityDomains,
   courseDimensions, setCourseDimensions,
   practiceItems,
-  listItems, itemTypes, getItem, createItem, updateItem, publishItem, toggleItem,
+  listItems, itemTypes, getItem, createItem, updateItem, publishItem, toggleItem, deleteItem,
   itemVersions, itemVersion, compareVersions, publishStatus,
   listRubricTemplates, createRubricTemplate, updateRubricTemplate, deleteRubricTemplate,
-  submitAnswer, submitAnswerAudio, studentOverview, listScores, getScore,
+  submitAnswer, submitAnswerAudio, submitAnswerImage, submitAnswerVideo, studentOverview, listScores, getScore,
   reviewQueue, reviewRecent, doReview,
   engineMeta,
   getDiagnosis, myDiagnosis, qualityMetrics, auditList,

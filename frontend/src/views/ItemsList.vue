@@ -37,6 +37,14 @@
           </template>
         </el-table-column>
         <el-table-column label="版本" width="64" prop="current_version" />
+        <el-table-column label="发布时间/截止" width="150">
+          <template #default="{ row }">
+            <div class="small-text" style="line-height:1.6">
+              <div><span class="muted">发布</span> {{ fmtTime(row.published_at) }}</div>
+              <div><span class="muted">截止</span> {{ row.submit_deadline ? fmtTime(row.submit_deadline) : '不限' }}</div>
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column label="发布" width="86">
           <template #default="{ row }">
             <el-tag :type="row.published ? 'success' : 'info'" size="small">{{ row.published ? '已发布' : '草稿' }}</el-tag>
@@ -47,16 +55,17 @@
             <el-switch :model-value="!!row.enabled" @change="(v) => onToggle(row, v)" />
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="220" fixed="right">
+        <el-table-column label="操作" width="280" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" :icon="EditPen" @click="$router.push(`/items/${row.id}`)">编辑</el-button>
             <el-button link type="info" :icon="Clock" @click="openVersions(row)">历史</el-button>
             <el-button v-if="!row.published" link type="success" :icon="Position" @click="onPublish(row)">发布</el-button>
-            <el-button v-else link type="warning" :icon="RefreshRight" @click="onPublish(row)">修订</el-button>
+            <el-button v-else link type="warning" :icon="RefreshRight" @click="onPublish(row)">重新发布</el-button>
+            <el-button v-if="isAdmin" link type="danger" :icon="Delete" @click="onDelete(row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
-      <p class="muted note">发布后量规与答案将固化为版本快照(历史成绩不回写)；双人复核发布需 2 个不同账号复核后才真正发布。</p>
+      <p class="muted note">发布后量规与答案将固化为版本快照(历史成绩不回写)；已发布的题可点"重新发布"直接再发布(版本+1)，无需重新编辑；双人复核发布需 2 个不同账号复核后才真正发布。</p>
     </div>
 
     <!-- 版本历史 / 比较 -->
@@ -106,10 +115,14 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, EditPen, Position, RefreshRight, Clock } from '@element-plus/icons-vue'
-import { listItems, itemTypes, listCourses, publishItem, toggleItem, itemVersions, compareVersions } from '@/api'
+import { Plus, EditPen, Position, RefreshRight, Clock, Delete } from '@element-plus/icons-vue'
+import { listItems, itemTypes, listCourses, publishItem, toggleItem, deleteItem, itemVersions, compareVersions } from '@/api'
+import { useAuthStore } from '@/stores/auth'
+
+const auth = useAuthStore()
+const isAdmin = computed(() => auth.role === 'admin')
 
 const items = ref([])
 const types = ref([])
@@ -167,14 +180,14 @@ async function onPublish(row) {
   const doublePub = row.scoring_policy?.require_double_publish
   await ElMessageBox.confirm(
     row.published
-      ? `将修订并重新生成版本快照${doublePub ? '(双人复核发布：需 2 个不同账号复核)' : ''}，确认？`
+      ? `不修改题目内容，直接重新发布并固化版本快照(v${(row.current_version || 1) + 1})${doublePub ? '(双人复核发布：需 2 个不同账号复核)' : ''}，确认？`
       : `发布并固化量规/答案${doublePub ? '(双人复核发布：需 2 个不同账号复核后才真正发布)' : ''}，确认？`,
-    '发布题目', { type: 'warning' })
+    row.published ? '重新发布题目' : '发布题目', { type: 'warning' })
   const res = await publishItem(row.id, '')
   if (res.publish_pending) {
     ElMessage.warning(res.message || `已登记复核 ${res.approvals_received}/${res.approvals_needed}，还需其他账号复核`)
   } else {
-    ElMessage.success(res.message || '发布成功')
+    ElMessage.success(res.message || '重新发布成功')
   }
   loadItems()
 }
@@ -184,6 +197,19 @@ async function onToggle(row, v) {
     await toggleItem(row.id, v)
     row.enabled = v
     ElMessage.success(v ? '已启用' : '已停用')
+  } catch (e) { /* 拦截器已提示 */ }
+}
+
+async function onDelete(row) {
+  const ok = await ElMessageBox.confirm(
+    `删除题目 ${row.code} 将连带删除该题全部答卷、成绩、版本快照、发布复核记录与上传文件，且不可恢复。确认删除？`,
+    '删除题目', { type: 'warning', confirmButtonText: '确认删除', cancelButtonText: '取消' },
+  ).catch(() => null)
+  if (!ok) return
+  try {
+    const res = await deleteItem(row.id)
+    ElMessage.success(`已删除 ${res.deleted.code}（答卷 ${res.deleted.answers} 条、成绩 ${res.deleted.scores} 条、版本 ${res.deleted.versions} 个）`)
+    await loadItems()
   } catch (e) { /* 拦截器已提示 */ }
 }
 

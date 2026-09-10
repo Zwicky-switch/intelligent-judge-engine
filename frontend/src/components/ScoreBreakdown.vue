@@ -1,5 +1,8 @@
  <template>
   <div>
+    <!-- 媒体证据(口语录音/实操视频/作答原图)回放 -->
+    <MediaEvidence v-if="answerId" :answer-id="answerId" :type="itemType" />
+
     <!-- 作答原文 + 证据高亮 -->
     <div class="card">
       <div class="block-title">作答原文与证据高亮</div>
@@ -103,6 +106,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import EvidenceText from './EvidenceText.vue'
+import MediaEvidence from './MediaEvidence.vue'
 import {
   VERDICT_LABELS, VERDICT_TAG, SPOKEN_LAYER_LABELS, SPOKEN_LAYER_TAG,
   SPOKEN_LAYER_NODATA, fmtPct,
@@ -111,6 +115,8 @@ import {
 const props = defineProps({
   answerText: { type: String, default: '' },
   score: { type: Object, default: () => ({}) },
+  answerId: { type: [Number, String], default: null },
+  itemType: { type: String, default: '' },
 })
 
 const SPOKEN_ORDER = ['pronunciation', 'fluency', 'expression', 'content']

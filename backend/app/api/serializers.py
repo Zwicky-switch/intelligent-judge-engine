@@ -36,6 +36,8 @@ def item_dict(it: Item) -> dict:
         "scoring_policy": it.scoring_policy or {},
         "difficulty": it.difficulty, "discrimination": it.discrimination,
         "enabled": bool(it.enabled), "published": bool(it.published),
+        "published_at": it.published_at.isoformat() if it.published_at else None,
+        "submit_deadline": it.submit_deadline.isoformat() if it.submit_deadline else None,
         "current_version": it.current_version,
     }
 

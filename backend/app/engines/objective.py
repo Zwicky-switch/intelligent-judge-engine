@@ -219,10 +219,14 @@ def grade_numeric(cfg: dict, response: str, max_score: float) -> EngineOutcome:
     earned = max_score * res["earned"]
     ev = EvidenceHit(label=res["status"], kind="numeric",
                      snippet=res["reason"])
+    # 无法解析(空答/前缀噪声/公式写法)或缺标准答案: 仍给确定性 0 分,
+    # 但通过 error 字段交由 runner 转人工复核(不静默判零后自动放行)
+    parse_failed = res["parsed_value"] is None
     return EngineOutcome(
         total=round(earned, 2), max_score=max_score, point_results=[],
         penalties=[], hits=[ev], comment="",
         reasoning=res["reason"], confidence=1.0,
+        error=res["reason"] if parse_failed else "",
         extra={"expected": res.get("expected"),
                "parsed_value": res.get("parsed_value"),
                "unit": cfg.get("answer", {}).get("unit", "")},

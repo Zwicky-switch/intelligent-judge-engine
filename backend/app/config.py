@@ -47,6 +47,14 @@ class Settings:
     GRADE_LLM_BASE_URL: str = os.getenv("GRADE_LLM_BASE_URL", "")
     GRADE_LLM_MODEL: str = os.getenv("GRADE_LLM_MODEL", "")
 
+    # ---------- OCR 视觉模型(图片识图转文字, 需多模态模型) ----------
+    # 注意: 判分模型若是 deepseek(纯文本)则无法看图, 故 OCR 独立配置视觉模型;
+    # 推荐智谱 glm-4v-flash(有免费额度)或通义 qwen-vl-plus。
+    OCR_LLM_PROVIDER: str = os.getenv("OCR_LLM_PROVIDER", "")
+    OCR_LLM_API_KEY: str = os.getenv("OCR_LLM_API_KEY", "")
+    OCR_LLM_BASE_URL: str = os.getenv("OCR_LLM_BASE_URL", "")
+    OCR_LLM_MODEL: str = os.getenv("OCR_LLM_MODEL", "")
+
     # ---------- 评阅默认阈值(单题可在 scoring_policy 覆盖) ----------
     REVIEW_THRESHOLD: float = float(os.getenv("REVIEW_THRESHOLD", "0.78"))  # 低信度阈值
     AUTO_RELEASE_OBJECTIVE: bool = _bool(os.getenv("AUTO_RELEASE_OBJECTIVE", "true"))

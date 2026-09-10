@@ -1,21 +1,19 @@
 @echo off
 setlocal
 cd /d "%~dp0..\backend"
-
 if not exist ".venv\Scripts\python.exe" (
-  echo [Init] æœªå‘ç°è™šæ‹Ÿç¯å¢ƒ, æ­£åœ¨åˆ›å»º .venv å¹¶å®‰è£…ä¾èµ–...
+  echo [Init] Î´·¢ÏÖĞéÄâ»·¾³, ÕıÔÚ´´½¨ .venv ²¢°²×°ÒÀÀµ...
   python -m venv .venv
   call .venv\Scripts\activate.bat
   python -m pip install -r requirements.txt
 ) else (
   call .venv\Scripts\activate.bat
 )
-
 echo.
 echo ============================================================
-echo   æ™ºè¯„ Insight åç«¯å¯åŠ¨:  http://127.0.0.1:8000
-echo   é¦–æ¬¡å¯åŠ¨å°†è‡ªåŠ¨å»ºè¡¨å¹¶æ³¨å…¥åˆå§‹åŒ–ç¤ºä¾‹æ•°æ®; é‡ç½®ä¸ºåˆå§‹çŠ¶æ€å¯åˆ é™¤
-echo   backend\data\app.db åé‡å¯ã€‚
+echo   ÖÇÆÀ Insight ºó¶ËÆô¶¯:  http://127.0.0.1:8000
+echo   Ê×´ÎÆô¶¯½«×Ô¶¯½¨±í²¢×¢Èë³õÊ¼»¯Ê¾ÀıÊı¾İ; ÖØÖÃÎª³õÊ¼×´Ì¬¿ÉÉ¾³ı
+echo   backend\data\app.db ºóÖØÆô¡£
 echo ============================================================
 python run.py
 endlocal

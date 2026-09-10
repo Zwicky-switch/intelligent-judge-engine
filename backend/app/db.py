@@ -50,6 +50,13 @@ def _ensure_columns() -> None:
             if "extra" not in cols:
                 with engine.begin() as conn:
                     conn.execute(text("ALTER TABLE scores ADD COLUMN extra JSON"))
+        if "items" in insp.get_table_names():
+            cols = {c["name"] for c in insp.get_columns("items")}
+            with engine.begin() as conn:
+                if "published_at" not in cols:
+                    conn.execute(text("ALTER TABLE items ADD COLUMN published_at DATETIME"))
+                if "submit_deadline" not in cols:
+                    conn.execute(text("ALTER TABLE items ADD COLUMN submit_deadline DATETIME"))
     except Exception:  # noqa: BLE001  (老库兼容失败不阻塞启动)
         pass
 

@@ -34,10 +34,11 @@ def _clamp_span(start, end, limit: int):
     return start, end
 
 
-def _verdict_from_ratio(ratio: float, desc: str) -> tuple[str, str]:
+def _verdict_from_ratio(ratio: float, desc: str, matched: set[str] | None = None) -> tuple[str, str]:
     if ratio >= 0.8:
         return V_SATISFIED, f"覆盖得分点要点(覆盖率 {ratio:.0%})"
-    if ratio >= 0.4:
+    # 命中过关键词但覆盖率未达阈值的作答, 按教学直觉给部分分, 而非 0 分
+    if ratio >= 0.4 or (matched and ratio > 0):
         return V_PARTIAL, f"部分覆盖得分点要点(覆盖率 {ratio:.0%}), 表述/前提不完整"
     return V_UNSATISFIED, f"未覆盖得分点({desc})"
 
@@ -49,7 +50,7 @@ def _judge_point(point: dict, text: str, idx: int) -> dict:
     score = float(point.get("score", 0))
     desc = point.get("description") or ""
     ratio, hits, matched = coverage_ratio(text, keywords)
-    verdict, reason = _verdict_from_ratio(ratio, desc)
+    verdict, reason = _verdict_from_ratio(ratio, desc, matched)
 
     # 无法判断: 疑似引图作答/超纲符号, 证据不足不推断学生不会
     if _REF_FIGURE_RE.search(text) and keywords:

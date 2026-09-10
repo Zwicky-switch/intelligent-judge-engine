@@ -94,8 +94,11 @@ def grade_answer(db: Session, answer: Answer, llm=None, model_version: str = MOD
         return None
 
     status, review_level = _route_status(itype, outcome)
-    # 客观题/公式题空卷或质量门控未过: 不静默自动 0, 转人工复核(口径: 宁转人工不静默给 0)
-    if (itype in OBJECTIVE_TYPES or itype == T_FORMULA) and not bool((answer.quality or {}).get("pass", True)):
+    # 客观题/公式题空卷、质量门控未过、引擎无法解析(如数值题带前缀噪声/公式写法)
+    # 或引擎标 error(未支持题型等): 不静默自动 0, 转人工复核(口径: 宁转人工不静默给 0)
+    if (itype in OBJECTIVE_TYPES or itype == T_FORMULA) and (
+            not bool((answer.quality or {}).get("pass", True))
+            or not outcome.ok or bool(outcome.error)):
         status, review_level = ST_NEEDS_REVIEW, LVL_FORCED
     final_score = outcome.total if status == ST_AUTO_PASSED else None
 

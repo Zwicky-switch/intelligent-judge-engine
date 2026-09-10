@@ -9,19 +9,20 @@
           <el-tag v-if="form.type" size="small" effect="plain">{{ typeLabel }}</el-tag>
         </div>
         <div class="actions">
-          <el-button v-if="!published" type="primary" :loading="saving" @click="save(false)">保存</el-button>
+          <el-button v-if="isNew" type="primary" :loading="saving" @click="save(false)">保存</el-button>
+          <el-button v-else type="primary" :loading="saving" @click="save(false)">{{ published ? '保存修改' : '保存' }}</el-button>
           <el-button v-if="!published" type="success" :loading="publishing" @click="save(true)">保存并发布</el-button>
-          <el-button v-else type="warning" :loading="publishing" @click="save(true)">修订发布(升版本)</el-button>
+          <el-button v-else type="warning" :loading="publishing" @click="save(true)">保存并重新发布(升版本)</el-button>
         </div>
       </div>
       <el-alert v-if="published" type="warning" :closable="false" show-icon class="pub-alert"
-                title="题目已发布：量规与答案已固化，内容锁定不可改。需修订请再次“修订发布”以生成新版本(历史成绩不回写)。" />
+                title="题目已发布：可直接修改内容，修改后点「保存并重新发布」生成新版本快照(v+1)；历史成绩绑定旧版本不回写。" />
     </div>
 
     <!-- 评分与发布策略(M9 双评 / M10 双人复核发布) -->
     <div class="card">
       <div class="block-title">评分与发布策略</div>
-      <el-form label-width="150px" label-position="left" :disabled="published">
+      <el-form label-width="150px" label-position="left">
         <el-form-item v-if="hasRubric" label="双评模式(review_mode)">
           <el-radio-group v-model="policy.review_mode">
             <el-radio value="single">单评（默认）</el-radio>
@@ -30,10 +31,11 @@
         </el-form-item>
         <el-form-item label="发布双人复核">
           <el-switch v-model="policy.require_double_publish"
-                     active-text="需 2 个不同账号复核通过后才真正发布(固化为版本)" inactive-text="单个账号即可发布" />
+                     active-text="需 2 个不同账号复核通过后才真正发布(固化为版本)"
+                     inactive-text="单个账号即可发布" />
         </el-form-item>
         <el-form-item v-if="!isNew" label="版本快照">
-          <span class="muted small-text">当前 v{{ form.current_version || 1 }} · {{ published ? '已发布(内容锁定, 修订发布会升版本)' : '草稿(未发布)' }}</span>
+          <span class="muted small-text">当前 v{{ form.current_version || 1 }} · {{ published ? '已发布(可修改, 重新发布会升版本)' : '草稿(未发布)' }}</span>
           <span class="muted small-text" style="margin-left:10px">历史版本与差异比较可在题库列表的「历史」中查看。</span>
         </el-form-item>
       </el-form>
@@ -41,7 +43,7 @@
 
     <div class="card">
       <div class="form-grid">
-        <el-form label-width="92px" label-position="left" :disabled="published">
+        <el-form label-width="92px" label-position="left">
           <el-row :gutter="16">
             <el-col :span="6">
               <el-form-item label="题目编号"><el-input v-model="form.code" placeholder="如 PHY-2026-050(留空自动)" /></el-form-item>
@@ -78,6 +80,16 @@
             <el-col :span="5"><el-form-item label="难度(a)"><el-input-number v-model="form.difficulty" :min="-3" :max="3" :step="0.1" style="width:100%" /></el-form-item></el-col>
             <el-col :span="5"><el-form-item label="区分度"><el-input-number v-model="form.discrimination" :min="0.2" :max="3" :step="0.1" style="width:100%" /></el-form-item></el-col>
           </el-row>
+          <el-row :gutter="16">
+            <el-col :span="10"><el-form-item label="提交截止时间">
+              <el-date-picker v-model="form.submit_deadline" type="datetime" value-format="YYYY-MM-DDTHH:mm:ss"
+                              placeholder="不限时(留空)" clearable style="width:100%" />
+            </el-form-item></el-col>
+            <el-col :span="10"><el-form-item label="发布时间">
+              <span class="muted small-text" v-if="form.published_at">{{ fmtDt(form.published_at) }}（{{ published ? '已发布' : '已发布过' }}）</span>
+              <span v-else class="muted small-text">未发布（点击"发布/修订发布"时自动记录）</span>
+            </el-form-item></el-col>
+          </el-row>
           <el-form-item label="题干/场景">
             <el-input v-model="form.title" type="textarea" :rows="3" placeholder="选择题可将选项写在题干内；主观题写出完整问题情境" />
           </el-form-item>
@@ -88,133 +100,128 @@
     <!-- 答案与判分配置 -->
     <div class="card" v-if="form.type">
       <div class="block-title">答案与判分配置</div>
-      <div v-if="published" class="readonly-json mono">{{ JSON.stringify(formAC, null, 2) }}</div>
 
-      <div v-else>
-        <!-- 单选题 -->
-        <el-form v-if="form.type === 'single_choice'" label-width="120px" label-position="left">
-          <el-form-item label="选项(每行一个)">
-            <el-input v-model="ui.optionsText" type="textarea" :rows="5" placeholder="A. 速度&#10;B. 时间&#10;C. 温度&#10;D. 路程" />
-          </el-form-item>
-          <el-form-item label="正确答案">
-            <el-select v-model="ui.correctLetter" style="width:120px">
-              <el-option v-for="L in 'ABCDEFGH'.split('')" :key="L" :label="L" :value="L" />
-            </el-select>
-          </el-form-item>
-        </el-form>
+      <!-- 单选题 -->
+      <el-form v-if="form.type === 'single_choice'" label-width="120px" label-position="left">
+        <el-form-item label="选项(每行一个)">
+          <el-input v-model="ui.optionsText" type="textarea" :rows="5" placeholder="A. 速度&#10;B. 时间&#10;C. 温度&#10;D. 路程" />
+        </el-form-item>
+        <el-form-item label="正确答案">
+          <el-select v-model="ui.correctLetter" style="width:120px">
+            <el-option v-for="l in 'ABCDEFGH'.split('')" :key="l" :label="l" :value="l" />
+          </el-select>
+        </el-form-item>
+      </el-form>
 
-        <!-- 多选题 -->
-        <el-form v-else-if="form.type === 'multiple_choice'" label-width="120px" label-position="left">
-          <el-form-item label="选项(每行一个)">
-            <el-input v-model="ui.optionsText" type="textarea" :rows="5" placeholder="A. xxx&#10;B. xxx" />
-          </el-form-item>
-          <el-form-item label="正确答案(多选)">
-            <el-checkbox-group v-model="ui.correctLetters">
-              <el-checkbox v-for="L in 'ABCDEFGH'.split('')" :key="L" :value="L">{{ L }}</el-checkbox>
-            </el-checkbox-group>
-          </el-form-item>
-          <el-form-item label="计分模式">
-            <el-radio-group v-model="ui.scoringMode">
-              <el-radio value="partial">部分得分(漏选/误选按比例)</el-radio>
-              <el-radio value="full">全对才得分</el-radio>
-            </el-radio-group>
-          </el-form-item>
-        </el-form>
+      <!-- 多选题 -->
+      <el-form v-else-if="form.type === 'multiple_choice'" label-width="120px" label-position="left">
+        <el-form-item label="选项(每行一个)">
+          <el-input v-model="ui.optionsText" type="textarea" :rows="5" placeholder="A. xxx&#10;B. xxx" />
+        </el-form-item>
+        <el-form-item label="正确答案(多选)">
+          <el-checkbox-group v-model="ui.correctLetters">
+            <el-checkbox v-for="l in 'ABCDEFGH'.split('')" :key="l" :value="l">{{ l }}</el-checkbox>
+          </el-checkbox-group>
+        </el-form-item>
+        <el-form-item label="计分模式">
+          <el-radio-group v-model="ui.scoringMode">
+            <el-radio value="partial">部分得分(漏选/误选按比例)</el-radio>
+            <el-radio value="full">全对才得分</el-radio>
+          </el-radio-group>
+        </el-form-item>
+      </el-form>
 
-        <!-- 判断题 -->
-        <el-form v-else-if="form.type === 'true_false'" label-width="120px" label-position="left">
-          <el-form-item label="正确答案">
-            <el-radio-group v-model="ui.tf">
-              <el-radio :value="true">正确</el-radio>
-              <el-radio :value="false">错误</el-radio>
-            </el-radio-group>
-          </el-form-item>
-        </el-form>
+      <!-- 判断题 -->
+      <el-form v-else-if="form.type === 'true_false'" label-width="120px" label-position="left">
+        <el-form-item label="正确答案">
+          <el-radio-group v-model="ui.tf">
+            <el-radio :value="true">正确</el-radio>
+            <el-radio :value="false">错误</el-radio>
+          </el-radio-group>
+        </el-form-item>
+      </el-form>
 
-        <!-- 填空题 -->
-        <el-form v-else-if="form.type === 'fill_blank'" label-width="120px" label-position="left">
-          <el-form-item label="填空配置">
-            <p class="hint">每行一个空；同一空可用“|”分隔多个可接受答案，如 <span class="mono">ma|m*a|m·a</span></p>
-            <el-input v-model="ui.blankLines" type="textarea" :rows="4" />
-          </el-form-item>
-          <el-form-item label="顺序">
-            <el-switch v-model="ui.order" active-text="顺序敏感" inactive-text="顺序无关" />
-          </el-form-item>
-        </el-form>
+      <!-- 填空题 -->
+      <el-form v-else-if="form.type === 'fill_blank'" label-width="120px" label-position="left">
+        <el-form-item label="填空配置">
+          <p class="hint">每行一个空；同一空可用“|”分隔多个可接受答案，如 <span class="mono">ma|m*a|m·a</span></p>
+          <el-input v-model="ui.blankLines" type="textarea" :rows="4" />
+        </el-form-item>
+        <el-form-item label="顺序">
+          <el-switch v-model="ui.order" active-text="顺序敏感" inactive-text="顺序无关" />
+        </el-form-item>
+      </el-form>
 
-        <!-- 数值题 -->
-        <el-form v-else-if="form.type === 'numeric'" label-width="120px" label-position="left" class="grid-form">
-          <el-form-item label="标准值"><el-input-number v-model="ui.value" :precision="3" /></el-form-item>
-          <el-form-item label="绝对容差"><el-input-number v-model="ui.tolAbs" :min="0" :precision="3" /></el-form-item>
-          <el-form-item label="单位"><el-input v-model="ui.unit" style="width:150px" placeholder="如 m/s^2, J, N" /></el-form-item>
-          <el-form-item label="缺单位保留"><el-input-number v-model="ui.unitCredit" :min="0" :max="1" :step="0.1" /></el-form-item>
-          <el-form-item label="有效数字"><el-input-number v-model="ui.sig" :min="1" :max="9" /></el-form-item>
-          <el-form-item label="相对容差"><el-input-number v-model="ui.tolRel" :min="0" :precision="3" /></el-form-item>
-          <p class="hint full">单位缺省时将进行纯数值比对；单位可识别时会做量纲换算(见引擎单位族)。</p>
-        </el-form>
+      <!-- 数值题 -->
+      <el-form v-else-if="form.type === 'numeric'" label-width="120px" label-position="left" class="grid-form">
+        <el-form-item label="标准值"><el-input-number v-model="ui.value" :precision="3" /></el-form-item>
+        <el-form-item label="绝对容差"><el-input-number v-model="ui.tolAbs" :min="0" :precision="3" /></el-form-item>
+        <el-form-item label="单位"><el-input v-model="ui.unit" style="width:150px" placeholder="如 m/s^2, J, N" /></el-form-item>
+        <el-form-item label="缺单位保留"><el-input-number v-model="ui.unitCredit" :min="0" :max="1" :step="0.1" /></el-form-item>
+        <el-form-item label="有效数字"><el-input-number v-model="ui.sig" :min="1" :max="9" /></el-form-item>
+        <el-form-item label="相对容差"><el-input-number v-model="ui.tolRel" :min="0" :precision="3" /></el-form-item>
+        <p class="hint full">单位缺省时将进行纯数值比对；单位可识别时会做量纲换算(见引擎单位族)。</p>
+      </el-form>
 
-        <!-- 口语题: 术语库 -->
-        <el-form v-else-if="form.type === 'spoken'" label-width="120px" label-position="left">
-          <el-form-item label="课程术语库">
-            <p class="hint">表达层术语词典(逗号分隔)。示例：加速度, 合外力, 成正比, 惯性</p>
-            <el-input v-model="ui.termText" type="textarea" :rows="3" />
-          </el-form-item>
-        </el-form>
+      <!-- 口语题 -->
+      <el-form v-else-if="form.type === 'spoken'" label-width="120px" label-position="left">
+        <el-form-item label="课程术语库">
+          <p class="hint">表达层术语词典(逗号分隔)。示例：加速度, 合外力, 成正比, 惯性</p>
+          <el-input v-model="ui.termText" type="textarea" :rows="3" />
+        </el-form-item>
+      </el-form>
 
-        <!-- 公式符号化题(M12) -->
-        <el-form v-else-if="form.type === 'formula'" label-width="120px" label-position="left">
-          <el-form-item label="标准公式">
-            <el-input v-model="ui.formulaExpected" style="width:380px" placeholder="如 F/m、a=(x+y)^2/m"
-                      @change="(v) => (ui.formulaExpected = (v || '').replace(/[×·]/g, '*').replace(/÷/g, '/'))" />
-            <p class="hint">学生作答将做“符号化简等价 / 数值抽样等价”判定：支持 + - * / ^、×·÷、上标；等价给满分，不等价不给分，空答转人工。</p>
-          </el-form-item>
-          <el-form-item label="变量数值域">
-            <el-input v-model="ui.formulaVarsText" type="textarea" :rows="4" placeholder="每行：字母|min|max&#10;F|1|12&#10;m|1|12"
-                      style="width:380px" />
-            <p class="hint">抽样判分按该域取随机点。未列出的自由字母自动取默认 [-10,10]；无需变量(常数式)可留空。</p>
-          </el-form-item>
-        </el-form>
-      </div>
+      <!-- 公式题 -->
+      <el-form v-else-if="form.type === 'formula'" label-width="120px" label-position="left">
+        <el-form-item label="标准公式">
+          <el-input v-model="ui.formulaExpected" style="width:380px" placeholder="如 F/m、a=(x+y)^2/m"
+                    @change="(v) => ui.formulaExpected = (v || '').replace(/[×·]/g, '*').replace(/÷/g, '/')" />
+          <p class="hint">学生作答将做“符号化简等价 / 数值抽样等价”判定：支持 + - * / ^、×·÷、上标；等价给满分，不等价不给分，空答转人工。</p>
+        </el-form-item>
+        <el-form-item label="变量数值域">
+          <el-input v-model="ui.formulaVarsText" type="textarea" :rows="4" style="width:380px"
+                    placeholder="每行：字母|min|max&#10;F|1|12&#10;m|1|12" />
+          <p class="hint">抽样判分按该域取随机点。未列出的自由字母自动取默认 [-10,10]；无需变量(常数式)可留空。</p>
+        </el-form-item>
+      </el-form>
     </div>
 
-    <!-- 参考答案(主观/口语) -->
+    <!-- 参考答案(供判点与模型提示) -->
     <div class="card" v-if="['subjective_text', 'spoken'].includes(form.type)">
       <div class="block-title">参考答案(供判点与模型提示)</div>
-      <el-input v-model="form.reference_answer" type="textarea" :rows="4" :disabled="published"
-                placeholder="写出完整/规范的参考答案" />
+      <el-input v-model="form.reference_answer" type="textarea" :rows="4" placeholder="写出完整/规范的参考答案" />
     </div>
 
-    <!-- 得分点量规(主观/口语/视频) -->
-    <div class="card" v-if="['subjective_text', 'spoken', 'practical_video'].includes(form.type)">
+    <!-- 得分点量规 -->
+    <div class="card" v-if="hasRubric">
       <div class="block-title">得分点量规</div>
       <div v-if="templates.length" class="tpl-row">
-        <el-select v-model="templateSel" placeholder="从量规模板套用(覆盖当前列表)" clearable size="small"
-                   style="width:320px" :disabled="published" @change="applyTemplate">
+        <el-select v-model="templateSel" placeholder="从量规模板套用(覆盖当前列表)" clearable size="small" style="width:320px" @change="applyTemplate">
           <el-option v-for="t in templates" :key="t.id" :label="`${t.name}（${t.point_count} 点 / ${t.total_score} 分）`" :value="t.id" />
         </el-select>
         <span class="muted small-text">套用后会按模板填充得分点，可继续手动编辑。</span>
       </div>
       <div class="rubric-head row">
-        <span class="col w60">编号</span><span class="col flex">得分点描述</span>
-        <span class="col w90">分值</span><span class="col flex2">关键词(逗号分隔，用于证据召回)</span>
+        <span class="col w60">编号</span>
+        <span class="col flex">得分点描述</span>
+        <span class="col w90">分值</span>
+        <span class="col flex2">关键词(逗号分隔，用于证据召回)</span>
         <span class="col w40"></span>
       </div>
       <div v-for="(r, i) in rubricRows" :key="i" class="row rubric-row">
         <span class="col w60 mono">P{{ i + 1 }}</span>
-        <el-input v-model="r.description" class="col flex" placeholder="该得分点的判定标准" :disabled="published" />
-        <el-input-number v-model="r.score" class="col w90" :min="0" :precision="1" :disabled="published" />
-        <el-input v-model="r.keywords" class="col flex2" placeholder="如: 受力分析, 摩擦力" :disabled="published" />
-        <el-button class="col w40" link type="danger" :disabled="published" @click="rubricRows.splice(i, 1)">删</el-button>
+        <el-input v-model="r.description" class="col flex" placeholder="该得分点的判定标准" />
+        <el-input-number v-model="r.score" class="col w90" :min="0" :precision="1" />
+        <el-input v-model="r.keywords" class="col flex2" placeholder="如: 受力分析, 摩擦力" />
+        <el-button class="col w40" link type="danger" @click="rubricRows.splice(i, 1)">删</el-button>
       </div>
-      <el-button text type="primary" :disabled="published" @click="rubricRows.push({ description: '', score: 1, keywords: '' })">
-        + 增加得分点
-      </el-button>
+      <el-button text type="primary" @click="rubricRows.push({ description: '', score: 1, keywords: '' })"> + 增加得分点 </el-button>
     </div>
 
     <!-- 评分策略 -->
-    <div class="card" v-if="['subjective_text', 'spoken', 'practical_video'].includes(form.type)">
+    <div class="card" v-if="hasRubric">
       <div class="block-title">评分策略</div>
-      <el-form label-width="140px" label-position="left" :disabled="published">
+      <el-form label-width="140px" label-position="left">
         <el-form-item label="复核阈值(置信度)">
           <el-input-number v-model="policy.review_threshold" :min="0" :max="1" :step="0.01" />
           <span class="hint inline">低于该置信度转强制复核</span>
@@ -229,25 +236,25 @@
       </el-form>
     </div>
 
-    <!-- 知识节点与 Q 矩阵 -->
+    <!-- 知识节点与能力维度映射(Q 矩阵) -->
     <div class="card">
       <div class="block-title">知识节点与能力维度映射(Q 矩阵)</div>
-      <el-form label-width="120px" label-position="left" :disabled="published">
+      <el-form label-width="120px" label-position="left">
         <el-form-item label="考查知识节点">
           <el-select v-model="form.knowledge_nodes" multiple filterable style="width:100%">
-            <el-option-group v-for="ch in chapterTree" :key="ch.id" :label="ch.name">
-              <el-option v-for="n in ch.nodes" :key="n.code" :label="`${n.code} ${n.name}`" :value="n.code" />
+            <el-option-group v-for="d in dimDomains" :key="d.id" :label="d.name">
+              <el-option v-for="node in d.nodes" :key="node.code" :label="`${node.code} ${node.name}`" :value="node.code" />
             </el-option-group>
           </el-select>
         </el-form-item>
       </el-form>
-      <el-table :data="nodeRows" size="small" border style="width:100%" v-if="nodeRows.length">
+      <el-table v-if="nodeRows.length" :data="nodeRows" size="small" border style="width:100%">
         <el-table-column label="知识节点" prop="code" width="200" />
         <el-table-column label="能力维度(二级)" min-width="260">
           <template #default="{ row }">
             <el-select v-model="row.dimension" filterable placeholder="选择能力维度" style="width:100%">
-              <el-option-group v-for="d in dimDomains" :key="d.code" :label="`${d.name} (${d.code})`">
-                <el-option v-for="m in d.dimensions" :key="m.code" :label="`${m.code} · ${m.name}`" :value="m.code" />
+              <el-option-group v-for="d in dims" :key="d.code" :label="`${d.name} (${d.code})`">
+                <el-option v-for="dd in d.dimensions" :key="dd.code" :label="`${dd.code} · ${dd.name}`" :value="dd.code" />
               </el-option-group>
             </el-select>
           </template>
@@ -263,11 +270,11 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { ArrowLeft } from '@element-plus/icons-vue'
-import { getItem, createItem, updateItem, publishItem, itemTypes, listCourses, courseKnowledge, listDimensions, listRubricTemplates } from '@/api'
+import { createItem, updateItem, publishItem, getItem, itemTypes, listCourses, listDimensions, listRubricTemplates, courseKnowledge } from '@/api'
 import { COGNITIVE_LABELS, ITEM_TYPE_LABELS } from '@/utils/const'
 
 const route = useRoute()
@@ -278,38 +285,42 @@ const itemId = isNew ? null : Number(route.params.id)
 const loading = ref(false)
 const saving = ref(false)
 const publishing = ref(false)
-const types = ref([])
 const courses = ref([])
+const types = ref([])
 const chapters = ref([])
-const chapterTree = ref([])
-const dimDomains = ref([])
+const dimDomains = ref([])   // 知识节点(按课程域)
+const dims = ref([])         // 能力维度(二级)
 const templates = ref([])
 const templateSel = ref(null)
 const published = ref(false)
+const nodeRows = ref([])
 
 const form = reactive({
-  code: '', type: '', course_id: null, chapter_id: null, title: '', max_score: 10,
-  cognitive_level: 'apply', difficulty: 0, discrimination: 1,
+  code: '', type: '', course_id: null, chapter_id: null, title: '',
+  max_score: 10, cognitive_level: 'apply', difficulty: 0, discrimination: 1,
   reference_answer: '', knowledge_nodes: [], current_version: 1,
+  submit_deadline: null, published_at: null,
 })
-// 题型相关
+
+function fmtDt(s) {
+  return s ? String(s).replace('T', ' ').slice(0, 19) : '—'
+}
 const ui = reactive({
   optionsText: '', correctLetter: 'A', correctLetters: [], scoringMode: 'full', tf: true,
   blankLines: '', order: true, value: 5, tolAbs: 0.1, tolRel: null, unit: 'm/s^2',
-  unitCredit: 0.3, sig: null, termText: '',
-  formulaExpected: '', formulaVarsText: '',
+  unitCredit: 0.3, sig: null, termText: '', formulaExpected: '', formulaVarsText: '',
 })
 const rubricRows = ref([])
-const RUBRIC_TYPES = ['subjective_text', 'spoken', 'practical_video']
-const hasRubric = computed(() => RUBRIC_TYPES.includes(form.type))
-const policy = reactive({ review_threshold: 0.72, auto_release: false, penaltyText: '',
-                          review_mode: 'single', require_double_publish: false })
-const nodeRows = ref([])
-
+const rubricTypes = ['subjective_text', 'spoken', 'practical_video']
+const hasRubric = computed(() => rubricTypes.includes(form.type))
+const policy = reactive({
+  review_threshold: 0.72, auto_release: false, penaltyText: '',
+  review_mode: 'single', require_double_publish: false,
+})
 const typeLabel = computed(() => ITEM_TYPE_LABELS[form.type] || form.type)
 
 function blankAC(type) {
-  const m = {
+  return JSON.parse(JSON.stringify({
     single_choice: { correct: 'A', options: [] },
     multiple_choice: { correct: ['A'], scoring_mode: 'full', options: [] },
     true_false: { correct: true },
@@ -317,10 +328,11 @@ function blankAC(type) {
     numeric: { answer: { value: 0, tolerance_abs: 0.1, unit: 'm/s^2', unit_credit: 0.3 } },
     spoken: { term_bank: [] },
     formula: { formula: { expected: '', variables: [] } },
-    subjective_text: {}, practical_video: {},
-  }
-  return JSON.parse(JSON.stringify(m[type] || {}))
+    subjective_text: {},
+    practical_video: {},
+  }[type] || {}))
 }
+
 function fillUiFromAC(ac, type) {
   Object.assign(ui, {
     optionsText: '', correctLetter: 'A', correctLetters: [], scoringMode: 'full', tf: true,
@@ -339,47 +351,48 @@ function fillUiFromAC(ac, type) {
     ui.tf = !!ac.correct
   } else if (type === 'fill_blank') {
     ui.order = ac.order_matters !== false
-    ui.blankLines = (ac.blanks || []).map((b) => (Array.isArray(b.value) ? b.value.join('|') : (b.value || ''))).join('\n')
+    ui.blankLines = (ac.blanks || []).map((s) => (Array.isArray(s.value) ? s.value.join('|') : s.value || '')).join('\n')
   } else if (type === 'numeric') {
-    const a = ac.answer || {}
-    ui.value = a.value ?? 0
-    ui.tolAbs = a.tolerance_abs ?? null
-    ui.tolRel = a.tolerance_rel ?? null
-    ui.unit = a.unit || ''
-    ui.unitCredit = a.unit_credit ?? 0.3
-    ui.sig = a.significant_digits ?? null
+    const s = ac.answer || {}
+    ui.value = s.value ?? 0
+    ui.tolAbs = s.tolerance_abs ?? null
+    ui.tolRel = s.tolerance_rel ?? null
+    ui.unit = s.unit || ''
+    ui.unitCredit = s.unit_credit ?? 0.3
+    ui.sig = s.significant_digits ?? null
   } else if (type === 'spoken') {
     ui.termText = (ac.term_bank || []).join(', ')
   } else if (type === 'formula') {
-    const f = (ac.formula || {})
-    ui.formulaExpected = f.expected || ''
-    ui.formulaVarsText = (f.variables || []).map((v) => `${v.name}|${v.min}|${v.max}`).join('\n')
+    const s = ac.formula || {}
+    ui.formulaExpected = s.expected || ''
+    ui.formulaVarsText = (s.variables || []).map((v) => `${v.name}|${v.min}|${v.max}`).join('\n')
   }
 }
+
 function buildAC() {
   const t = form.type
   if (t === 'single_choice') return { correct: ui.correctLetter, options: splitLines(ui.optionsText) }
   if (t === 'multiple_choice') return { correct: ui.correctLetters, scoring_mode: ui.scoringMode, options: splitLines(ui.optionsText) }
   if (t === 'true_false') return { correct: ui.tf }
   if (t === 'fill_blank') {
-    const blanks = ui.blankLines.split('\n').filter((s) => s.trim() !== '').map((s) => {
-      const parts = s.split('|').map((x) => x.trim()).filter(Boolean)
-      return { value: parts.length === 1 ? parts[0] : parts }
-    })
-    return { blanks, order_matters: ui.order }
+    return {
+      blanks: ui.blankLines.split('\n').filter((s) => s.trim() !== '').map((s) => {
+        const u = s.split('|').map((x) => x.trim()).filter(Boolean)
+        return { value: u.length === 1 ? u[0] : u }
+      }),
+      order_matters: ui.order,
+    }
   }
   if (t === 'numeric') {
-    const a = { value: ui.value }
-    if (ui.tolAbs !== null && ui.tolAbs !== undefined) a.tolerance_abs = ui.tolAbs
-    if (ui.tolRel !== null && ui.tolRel !== undefined) a.tolerance_rel = ui.tolRel
-    if (ui.unit) a.unit = ui.unit
-    a.unit_credit = ui.unitCredit
-    if (ui.sig) a.significant_digits = ui.sig
-    return { answer: a }
+    const e = { value: ui.value }
+    if (ui.tolAbs !== null && ui.tolAbs !== undefined) e.tolerance_abs = ui.tolAbs
+    if (ui.tolRel !== null && ui.tolRel !== undefined) e.tolerance_rel = ui.tolRel
+    if (ui.unit) e.unit = ui.unit
+    e.unit_credit = ui.unitCredit
+    if (ui.sig) e.significant_digits = ui.sig
+    return { answer: e }
   }
-  if (t === 'spoken') {
-    return { term_bank: splitTerms(ui.termText) }
-  }
+  if (t === 'spoken') return { term_bank: splitTerms(ui.termText) }
   if (t === 'formula') {
     const variables = splitLines(ui.formulaVarsText).map((line) => {
       const p = line.split('|').map((x) => x.trim())
@@ -393,8 +406,6 @@ function buildAC() {
   }
   return {}
 }
-// 已发布只读展示由 formAC 提供; 未发布时保存使用 buildAC()
-const formAC = ref({})
 
 function splitLines(s) {
   return (s || '').split('\n').map((x) => x.trim()).filter(Boolean)
@@ -425,12 +436,7 @@ function buildPayload() {
   const qmArr = nodeRows.value.filter((r) => r.code && r.dimension)
   for (const r of qmArr) qm[r.code] = { dimension: r.dimension, weight: Number(r.weight) || 1 }
 
-  let ac = {}
-  if (isNew) ac = buildAC()
-  else {
-    // 已发布原样保留; 未发布按 UI 重建
-    ac = published.value ? (formAC.value || {}) : buildAC()
-  }
+  const ac = buildAC()   // 已发布题目也允许编辑配置, 统一按 UI 重建
 
   const rubric = rubricRows.value
     .filter((r) => (r.description || '').trim())
@@ -442,55 +448,55 @@ function buildPayload() {
     }))
 
   const penalties = policy.penaltyText ? parsePenalties(policy.penaltyText) : []
-  const sp = {
-    review_threshold: Number(policy.review_threshold) || 0.7,
-  }
+  const sp = { review_threshold: Number(policy.review_threshold) || 0.7 }
   if (penalties.length) sp.penalties = penalties
   if (form.type === 'subjective_text' && policy.auto_release) sp.auto_release = true
   if (hasRubric.value && policy.review_mode === 'double') sp.review_mode = 'double'
   if (policy.require_double_publish) sp.require_double_publish = true
 
   return {
-    code: form.code.trim() || null, type: form.type, title: form.title,
-    course_id: form.course_id, chapter_id: form.chapter_id || null,
-    max_score: Number(form.max_score) || 1, cognitive_level: form.cognitive_level,
-    answer_config: ac, rubric, reference_answer: form.reference_answer,
-    knowledge_nodes: [...form.knowledge_nodes], q_matrix: qm,
-    scoring_policy: sp, difficulty: form.difficulty, discrimination: form.discrimination,
+    code: form.code.trim() || null,
+    type: form.type,
+    title: form.title,
+    course_id: form.course_id,
+    chapter_id: form.chapter_id || null,
+    max_score: Number(form.max_score) || 1,
+    cognitive_level: form.cognitive_level,
+    answer_config: ac,
+    rubric,
+    reference_answer: form.reference_answer,
+    knowledge_nodes: [...form.knowledge_nodes],
+    q_matrix: qm,
+    scoring_policy: sp,
+    difficulty: form.difficulty,
+    discrimination: form.discrimination,
+    submit_deadline: form.submit_deadline || null,
   }
 }
 
 async function save(doPublish) {
   const payload = buildPayload()
-  if (!payload.type || !payload.title.trim()) {
-    ElMessage.warning('请选择题型并填写题干')
-    return
-  }
-  if (payload.course_id == null) {
-    ElMessage.warning('请选择所属课程')
-    return
-  }
+  if (!payload.type || !payload.title.trim()) { ElMessage.warning('请选择题型并填写题干'); return }
+  if (payload.course_id == null) { ElMessage.warning('请选择所属课程'); return }
   if (payload.type === 'practical_video' && payload.rubric.length === 0) {
-    ElMessage.warning('实操视频题需先按步骤填写量规，供人工评阅')
+    ElMessage.warning('实操视频题需先按步骤填写量规（含关键词），供音轨内容自动判分与人工复核')
     return
   }
   saving.value = true
   try {
     let row
     if (isNew) row = await createItem(payload)
-    else if (!published.value) row = await updateItem(itemId, payload)
+    else row = await updateItem(itemId, payload)   // 已发布题目也可直接修改
     if (doPublish) {
       publishing.value = true
-      // 已发布内容锁定: 直接“修订发布”固化新快照(升版本, 历史成绩不回写)
-      if (!isNew && published.value) row = await publishItem(itemId)
-      else row = await publishItem(row.id)
+      row = await publishItem(row.id)              // 已发布=修订发布(版本+1); 草稿=首次发布
       if (row.publish_pending) {
         ElMessage.warning(row.message || `待复核：已登记 ${row.approvals_received}/${row.approvals_needed} 个账号，需另一账号复核后发布`)
       } else {
         ElMessage.success(row.message || '已发布并固化为版本快照')
       }
     } else {
-      ElMessage.success('已保存')
+      ElMessage.success(published.value ? '已保存修改' : '已保存')
     }
     router.replace(`/items/${row.id}`)
     await load()
@@ -517,7 +523,7 @@ function applyTemplate(id) {
 }
 function onCourseChange(cid) {
   form.chapter_id = null
-  if (!cid) { chapters.value = []; chapterTree.value = [] }
+  if (!cid) { chapters.value = []; dimDomains.value = [] }
   loadKnowledge(cid)
   loadTemplates(cid)
 }
@@ -531,7 +537,7 @@ async function loadKnowledge(cid) {
   if (!cid) return
   const res = await courseKnowledge(cid)
   chapters.value = res.chapters || []
-  chapterTree.value = res.chapters || []
+  dimDomains.value = res.chapters || []
 }
 
 async function load() {
@@ -541,8 +547,8 @@ async function load() {
     courses.value = cs.items || []
     const it = await itemTypes()
     types.value = it.types || []
-    const dims = await listDimensions()
-    dimDomains.value = dims.domains || []
+    const dd = await listDimensions()
+    dims.value = dd.domains || []
     if (isNew) {
       if (courses.value.length) {
         form.course_id = courses.value[0].id
@@ -563,8 +569,8 @@ async function load() {
       difficulty: row.difficulty, discrimination: row.discrimination,
       reference_answer: row.reference_answer, knowledge_nodes: row.knowledge_nodes || [],
       current_version: row.current_version || 1,
+      submit_deadline: row.submit_deadline || null, published_at: row.published_at || null,
     })
-    formAC.value = row.answer_config || {}
     // 读入各编辑模型
     fillUiFromAC(row.answer_config || {}, row.type)
     rubricRows.value = (row.rubric || []).map((p) => ({
@@ -603,9 +609,10 @@ onMounted(load)
 .col.w60 { width: 60px; flex: none; } .col.w40 { width: 40px; flex: none; }
 .col.w90 { width: 90px; flex: none; }
 .hint { font-size: 12px; color: #909399; margin: 2px 0; width: 100%; }
-.hint.inline { margin-left: 10px; }
+.hint.inline { margin-left: 10px; width: auto; }
 .hint.full { width: 100%; }
-.readonly-json { background: #f6f8fa; padding: 10px; border-radius: 6px; }
+.grid-form { display: flex; flex-wrap: wrap; }
+.grid-form .el-form-item { width: 48%; margin-right: 2%; }
 .mono { font-family: Consolas, Menlo, monospace; font-size: 12px; }
 .tpl-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
 .small-text { font-size: 12px; }

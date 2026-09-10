@@ -52,9 +52,11 @@ def _item_meta(db: Session, score: Score, answer: Answer,
 @router.get("/queue")
 def review_queue(review_level: str | None = Query(default=None),
                  item_type: str | None = None,
+                 status: str | None = Query(default="needs_review"),
                  cur: CurrentUser = Depends(require_roles(*REVIEWERS)),
                  db: Session = Depends(get_db)):
-    rows = list_review_queue(db, review_level=review_level, item_type=item_type)
+    rows = list_review_queue(db, review_level=review_level, item_type=item_type,
+                             status=status)
     double_first = sum(1 for sc, _, _ in rows
                        if (sc.extra or {}).get("double", {}).get("state") == "await_pass1")
     double_await = sum(1 for sc, _, _ in rows

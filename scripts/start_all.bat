@@ -1,13 +1,12 @@
 @echo off
 setlocal
-chcp 65001 >nul
-echo [1/2] å¯åŠ¨åç«¯(127.0.0.1:8000) ...
-start "æ™ºè¯„Insight-åç«¯" cmd /k "%~dp0start_backend.bat"
+echo [1/2] Æô¶¯ºó¶Ë(127.0.0.1:8000) ...
+start "Insight-Backend" cmd /k "%~dp0start_backend.bat"
 timeout /t 4 /nobreak >nul
-echo [2/2] å¯åŠ¨å‰ç«¯(http://127.0.0.1:5173) ...
-start "æ™ºè¯„Insight-å‰ç«¯" cmd /k "%~dp0start_frontend.bat"
+echo [2/2] Æô¶¯Ç°¶Ë(http://127.0.0.1:5173) ...
+start "Insight-Frontend" cmd /k "%~dp0start_frontend.bat"
 
-echo æ­£åœ¨ç­‰å¾…å‰åç«¯å°±ç»ª(é¦–æ¬¡è¿è¡Œè‹¥éœ€ npm install ä¼šç¨æ…¢)...
+echo ÕıÔÚµÈ´ıÇ°ºó¶Ë¾ÍĞ÷(Ê×´ÎÔËĞĞÈôĞè npm install »áÉÔÂı)...
 set tries=0
 :wait
 curl -s -o nul --max-time 2 http://127.0.0.1:8000/ >nul 2>&1
@@ -18,15 +17,15 @@ goto up
 :notyet
 set /a tries+=1
 if %tries% GEQ 90 (
-  echo ç­‰å¾…è¶…æ—¶ã€‚è¯·ç¡®è®¤åç«¯/å‰ç«¯çª—å£æ— æŠ¥é”™å, æ‰‹åŠ¨åœ¨æµè§ˆå™¨æ‰“å¼€ http://127.0.0.1:5173
+  echo µÈ´ı³¬Ê±¡£ÇëÈ·ÈÏºó¶Ë/Ç°¶Ë´°¿ÚÎŞ±¨´íºó, ÊÖ¶¯ÔÚä¯ÀÀÆ÷´ò¿ª http://127.0.0.1:5173
   goto done
 )
 timeout /t 2 /nobreak >nul
 goto wait
 
 :up
-echo å‰åç«¯å·²å°±ç»ª, æ­£åœ¨æ‰“å¼€æµè§ˆå™¨ ...
-echo æ³¨æ„: è¯·å‹¿ç›´æ¥åŒå‡» frontend\index.html(ä¼šç™½å±), ä¸€å¾‹è®¿é—® http://127.0.0.1:5173
+echo Ç°ºó¶ËÒÑ¾ÍĞ÷, ÕıÔÚ´ò¿ªä¯ÀÀÆ÷ ...
+echo ×¢Òâ: ÇëÎğÖ±½ÓË«»÷ frontend\index.html(»á°×ÆÁ), Ò»ÂÉ·ÃÎÊ http://127.0.0.1:5173
 start "" "http://127.0.0.1:5173"
 :done
 endlocal

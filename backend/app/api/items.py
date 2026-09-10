@@ -1,21 +1,52 @@
-"""题库: 题目草稿/详情/发布/停用(命题教师与教务)."""
+"""题库: 题目草稿/详情/发布/停用(命题教师与教务), 删除(仅教务管理员)."""
 from __future__ import annotations
+
+from datetime import datetime
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.constants import (
     ALL_ITEM_TYPES, ROLE_ADMIN, ROLE_PROP_TEACHER, OBJECTIVE_TYPES,
 )
 from app.core.deps import CurrentUser, require_roles
 from app.db import get_db
-from app.models import Answer, Course, Item, ItemVersion, PublishApproval, User
+from app.models import (
+    Answer, AuditLog, Course, Evidence, Item, ItemVersion, PublishApproval,
+    ReviewRecord, Score, User,
+)
+from app.models.base import utcnow
 
 from app.api.serializers import item_dict
 
 router = APIRouter(prefix="/items", tags=["题库"])
 STAFF = (ROLE_ADMIN, ROLE_PROP_TEACHER)
+
+
+def _parse_dt(s: str | None) -> datetime | None:
+    """解析 ISO 时间串(前端 el-date-picker value-format), 非法抛 422."""
+    if s is None or not str(s).strip():
+        return None
+    try:
+        return datetime.fromisoformat(str(s).strip().replace("Z", "+00:00"))
+    except ValueError as e:
+        raise HTTPException(422, f"时间格式非法(需 YYYY-MM-DDTHH:mm:ss): {s}") from e
+
+
+def _delete_upload(uri: str) -> None:
+    """删除答卷关联的上传文件(音频/图片/视频), 仅限 UPLOAD_DIR 内防越界."""
+    if not uri:
+        return
+    try:
+        p = Path(uri).resolve()
+        base = Path(settings.UPLOAD_DIR).resolve()
+        if p.is_relative_to(base) and p.is_file():
+            p.unlink(missing_ok=True)
+    except Exception:
+        pass
 
 
 class ItemBody(BaseModel):
@@ -34,6 +65,8 @@ class ItemBody(BaseModel):
     scoring_policy: dict = Field(default_factory=dict)
     difficulty: float = 0.0
     discrimination: float = 1.0
+    # 提交截止时间(ISO 串, 空=不限时); 发布时间 published_at 由发布动作自动写入, 不可手填
+    submit_deadline: str | None = None
 
 
 @router.get("")
@@ -96,6 +129,7 @@ def create_item(body: ItemBody, cur: CurrentUser = Depends(require_roles(*STAFF)
               knowledge_nodes=body.knowledge_nodes, q_matrix=body.q_matrix,
               scoring_policy=body.scoring_policy,
               difficulty=body.difficulty, discrimination=body.discrimination,
+              submit_deadline=_parse_dt(body.submit_deadline),
               published=False, created_by=cur.id)
     db.add(it)
     db.commit()
@@ -109,8 +143,8 @@ def update_item(item_id: int, body: ItemBody,
     it = db.get(Item, item_id)
     if it is None:
         raise HTTPException(404, "题目不存在")
-    if it.published:
-        raise HTTPException(409, "已发布题目锁定, 请新建修订(发布后量规需固化, 历史成绩不回写)")
+    # 已发布题目允许修订: 内容可直接更新, 历史成绩绑定旧版本快照不回写;
+    # 更新后再次"发布/修订发布"即固化新版本快照(版本+1)。
     it.type = body.type
     it.title = body.title
     it.course_id = body.course_id
@@ -125,6 +159,7 @@ def update_item(item_id: int, body: ItemBody,
     it.scoring_policy = body.scoring_policy
     it.difficulty = body.difficulty
     it.discrimination = body.discrimination
+    it.submit_deadline = _parse_dt(body.submit_deadline)
     db.commit()
     return item_dict(it)
 
@@ -167,11 +202,12 @@ def publish_item(item_id: int, comment: str = "",
                        max_score=it.max_score, scoring_policy=it.scoring_policy,
                        published_by=cur.id))
     it.published = True
+    it.published_at = utcnow()   # 发布时间 = 最近一次真正发布/修订发布的时刻
     db.commit()
     out = item_dict(it)
     out.update({"publish_pending": False, "approvals_needed": need,
                 "approvals_received": len(approver_ids),
-                "message": "复核账足, 已发布并固化版本快照(历史成绩不回写)。"})
+                "message": f"已发布并固化版本快照(v{it.current_version})，历史成绩不回写。"})
     return out
 
 
@@ -185,6 +221,52 @@ def toggle_item(item_id: int, enabled: bool = Query(...),
     it.enabled = enabled
     db.commit()
     return item_dict(it)
+
+
+@router.delete("/{item_id}")
+def delete_item(item_id: int,
+                cur: CurrentUser = Depends(require_roles(ROLE_ADMIN)),
+                db: Session = Depends(get_db)):
+    """删除题目及该题全部数据(仅教务管理员): 版本快照/发布复核/答卷/成绩/证据/复核记录/上传文件."""
+    it = db.get(Item, item_id)
+    if it is None:
+        raise HTTPException(404, "题目不存在")
+    score_ids = [s.id for s in db.query(Score).filter(Score.item_id == item_id).all()]
+    answer_ids = [a.id for a in db.query(Answer).filter(Answer.item_id == item_id).all()]
+    # 1) 上传文件(仅 UPLOAD_DIR 内)
+    for (uri,) in db.query(Answer.content_uri).filter(Answer.item_id == item_id).all():
+        _delete_upload(uri)
+    # 2) 教师复核/仲裁记录(经 score 关联)
+    if score_ids:
+        db.query(ReviewRecord).filter(ReviewRecord.score_id.in_(score_ids)).delete(
+            synchronize_session=False)
+    # 3) 评分证据(按 answer/score/item 关联)
+    db.query(Evidence).filter(
+        (Evidence.item_id == item_id)
+        | ((Evidence.answer_id.isnot(None)) & (Evidence.answer_id.in_(answer_ids)))
+        | ((Evidence.score_id.isnot(None)) & (Evidence.score_id.in_(score_ids)))
+    ).delete(synchronize_session=False)
+    # 4) 成绩
+    if score_ids:
+        db.query(Score).filter(Score.id.in_(score_ids)).delete(synchronize_session=False)
+    # 5) 答卷
+    if answer_ids:
+        db.query(Answer).filter(Answer.id.in_(answer_ids)).delete(synchronize_session=False)
+    # 6) 发布双人复核登记 / 版本快照
+    db.query(PublishApproval).filter(PublishApproval.item_id == item_id).delete(
+        synchronize_session=False)
+    n_versions = db.query(ItemVersion).filter(ItemVersion.item_id == item_id).delete(
+        synchronize_session=False)
+    # 7) 审计留痕(审计记录本身不可删除)
+    db.add(AuditLog(actor=cur.username, actor_id=cur.id, action="item.delete",
+                    target_type="item", target_id=str(item_id),
+                    detail={"code": it.code, "title": it.title,
+                            "answers": len(answer_ids), "scores": len(score_ids)}))
+    db.delete(it)
+    db.commit()
+    return {"ok": True, "deleted": {
+        "item_id": item_id, "code": it.code,
+        "versions": n_versions, "answers": len(answer_ids), "scores": len(score_ids)}}
 
 
 # ---------------- 版本快照 / 比较 / 发布复核状态 ----------------

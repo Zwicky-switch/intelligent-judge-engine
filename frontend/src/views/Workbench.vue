@@ -31,6 +31,10 @@
         <el-descriptions-item label="作答模态">{{ answer?.modality }}</el-descriptions-item>
       </el-descriptions>
 
+      <el-alert v-if="isFinalized" type="info" :closable="false" show-icon class="readonly-tip"
+                :title="`该卷已终审（${STATUS_LABELS[score.status]} · 终审分 ${fmtScore(score.final_score ?? score.total_score)} / ${fmtScore(score.max_score)}）`"
+                description="已终审卷仅只读查看，不再支持改分操作；复核轨迹与证据明细见下方。" />
+
       <!-- 双评/仲裁进度横幅 -->
       <div v-if="isDouble" class="double-banner" :class="{ arb: dbl.state === 'await_arbitrate' }">
         <div class="db-row">
@@ -55,11 +59,12 @@
         <div class="muted small-text db-msg">{{ dbl.message }}</div>
       </div>
 
-      <ScoreBreakdown :answer-text="answerText" :score="scoreWithEvidence" />
+      <ScoreBreakdown :answer-text="answerText" :score="scoreWithEvidence"
+                      :answer-id="score?.answer_id" :item-type="score?.item?.type" />
     </el-card>
 
-    <!-- 教师操作条 -->
-    <div v-if="score" class="review-bar card">
+    <!-- 教师操作条(仅未终审卷显示; 已评阅卷只读查看) -->
+    <div v-if="score && !isFinalized" class="review-bar card">
       <div class="bar-left">
         <b>{{ opTitle }}</b>
         <span class="muted small-text">{{ opHint }}</span>
@@ -128,6 +133,8 @@ const answerText = computed(() => {
   return a.raw_response || a.content || ''
 })
 const scoreWithEvidence = computed(() => (score.value || {}))
+// 已终审(教师已复核/仲裁/自动放行) -> 只读查看, 不再显示操作条
+const isFinalized = computed(() => !!score.value && score.value.status !== 'needs_review')
 
 const dbl = computed(() => (score.value?.extra?.double) || null)
 // 双评卷判定: 有双评骨架, 或题目显式配置了 double 复核模式(兼容首评前尚无骨架的旧卷)
@@ -233,6 +240,7 @@ onMounted(load)
 .subject .code { font-size: 13px; }
 .subject .title { margin-left: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .desc { margin-bottom: 0; }
+.readonly-tip { margin-top: 12px; }
 .review-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .bar-left { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 220px; }
 .bar-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }

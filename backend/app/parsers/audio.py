@@ -79,18 +79,34 @@ def get_asr(manual_transcript: str = "") -> ASRAdapter | None:
         return None
 
 
+_whisper_model_cache = {}
+
+
+def _load_whisper(model_size: str):
+    """进程级单例缓存: 模型体积数百 MB, 避免每次提交都从磁盘重载."""
+    if model_size not in _whisper_model_cache:
+        from faster_whisper import WhisperModel
+
+        _whisper_model_cache[model_size] = WhisperModel(
+            model_size, device="cpu", compute_type="int8")
+    return _whisper_model_cache[model_size]
+
+
 class _WhisperASR(ASRAdapter):
     """faster-whisper 可选接入(词级时间戳). 需自行 pip install faster-whisper."""
 
     available = True
 
     def __init__(self, model_size: str = "small"):
-        from faster_whisper import WhisperModel
-
-        self._model = WhisperModel(model_size, device="cpu", compute_type="int8")
+        self._model = _load_whisper(model_size)
 
     def transcribe(self, path: Path) -> tuple[str, list, str]:
-        segs, _info = self._model.transcribe(str(path), word_timestamps=True)
+        # initial_prompt 引导中文口语转写, 显著降低"合外力->和外力"类误识别
+        segs, _info = self._model.transcribe(
+            str(path),
+            word_timestamps=True,
+            initial_prompt="以下是普通话的句子。",
+        )
         segments = []
         text = ""
         for seg in segs:

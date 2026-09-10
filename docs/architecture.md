@@ -19,7 +19,7 @@
 2. **量规约束 + 模型可替换** —— 评阅引擎以题目 `rubric`(得分点：分值/描述/关键词)与 `answer_config`(标准答案)为唯一分源；大模型只做"解释、判点复核、评语"，输出被二次夹取，不能改分。
 3. **人机协同** —— 教师保留终审权，`accept / adjust / arbitrate / return_model` 全部落库；`AuditLog` 不可删除。
 4. **置信度路由** —— `confidence`、质量门控、证据完整度决定放行/复核档位：`none`(自动放行)、`sample`(抽样复核)、`forced`(强制复核)。
-5. **如实上报** —— 未观测的能力维度、未接入的评测模态(发音/实操视频识别)在报告中如实标注"无数据"，前端与指标均不产生无效评分。
+5. **如实上报** —— 未观测的能力维度、未接入的评测模态(发音音素对齐/视频姿态识别)在报告中如实标注"无数据"，前端与指标均不产生无效评分。
 
 ---
 
@@ -35,7 +35,7 @@ backend FastAPI
    ├─ app/llm         get_model()=deepseek|qwen|zhipu|openai_compat|builtin(内置本地引擎)
    │                     request_json() 强制 JSON + 量规约束提示词(subjective/中文评语)
    ├─ app/engines     objective(确定性) · numeric(单位/容差/有效数字) · symbolic(公式·符号/数值抽样等价)
-   │                     subjective(级联) · spoken(四层) · video_stub(实操·接口预留)
+   │                     subjective(级联) · spoken(四层) · video_stub(实操·基础版:音轨转写判分)
    ├─ app/orchestrator runner.grade_answer() → EngineOutcome → Score/Evidence/Audit(含 latency/extra)
    │                     review.apply_review() → 复核·双评(pass1/pass2)·仲裁审计   jobs → 批量任务
    ├─ app/diagnostics qmatrix → mastery(node/ability/dimension/theta·60维全录)
@@ -66,14 +66,20 @@ backend FastAPI
 5. 质量门控不通过/疑似"引图作答"→ 不改判 0 分，强制人工复核。
 
 ### 3.3 口语题(`engines/spoken.py` · 四层)
-- `pronunciation/fluency` 依赖 ASR 词级时间戳(`ASRAdapter` 接口)；无 ASR 时该层标记**无数据**(`nodata`)不计分，如实呈现。
+- `pronunciation` 需音素级对齐(未接入时标**无数据** `nodata` 不计分，如实呈现)；`fluency` 已接入 faster-whisper 词级时间戳(`ASRAdapter` 接口)，按语速与停顿真算；无时间戳(人工誊抄)时仍标无数据。
 - `expression` 走课程术语库与语法启发式；`content` 层按量规要点匹配(可 LLM 复核)。
-- 作答支持「文本转写(视为人工誊抄)」与「可选上传录音(multipart，扩展名白名单)」；转写文本照常判分，录音落盘为 `content_uri` 供后续接入真实 ASR 回放(装 faster-whisper 则可自动转录)。
+- 作答支持「文本转写(视为人工誊抄)」与「上传录音(multipart，扩展名白名单)」；装 faster-whisper 后服务端自动转录并产出词级时间戳，流畅层真算，录音落盘为 `content_uri` 供回放。
 - 判分产出四层 `layers{pronunciation/fluency/expression/content}` 持久化于 `Score.extra.layers`；含人工侧车词级时间戳的样本会在 `fluency` 层真实计算一次语速。
 - 初始化样本含"人工誊抄转写(侧车)"答案，用于展示四层报告与时间戳证据结构。
 
-### 3.4 实操视频题(`engines/video_stub.py` · 接口预留)
-- 实现引擎接口但明确需姿态/动作识别能力支持；步骤置为 `证据不足` 交由教师按量规人工评阅，**不推断学生未完成**。
+### 3.4 实操视频题(`engines/video_stub.py` · 基础版: 音轨转写内容判分)
+- 上传视频由 faster-whisper 直接转写音轨(PyAV 解码, 无需 ffmpeg)；对量规中**配置了 keywords** 的步骤复用主观题判点器按转写文本判 满足/部分/不满足 并给分。
+- 未配置 keywords 的动作/时序步骤标记**证据不足**，不推断学生未完成、不扣分，整卷转人工按量规评定；无音轨转写(静音)同样转人工。
+- 姿态识别/动作时序对齐未接入——动作类步骤最终分以教师人工评定为准(强制复核兜底)。
+
+### 3.4b 图片作答(`parsers/image_ocr.py` · 视觉模型 + RapidOCR 兜底)
+- `POST /answers/image`：视觉多模态模型(智谱 glm-4v-flash 已配 / 通义 qwen-vl-plus / 自定义)优先提取图片文字；未配置或调用失败自动回退本地 **RapidOCR**(离线)；两者都不可用才 422。
+- 识别文本作 `content` 落库并走主观题判分引擎，原图存 `content_uri` 作为证据；低质量识别经质量门控/强制复核兜底。
 
 ### 3.5 公式题(`engines/symbolic.py` · 确定性·幂等)
 - `answer_config = {formula:{expected, variables:[{name,min,max}]}}`；作答为学生填写的表达式字符串。
@@ -155,12 +161,12 @@ OpenAPI 交互文档：启动后端后访问 `http://127.0.0.1:8000/docs`。
 
 | 扩展点 | 当前版本 | 后续规划 |
 |---|---|---|
-| 实操视频识别 | `video_stub` 接口预留，教师按步骤量规人工评阅 | 接入姿态/动作识别模型；帧证据入 `Evidence` |
-| 实时发音 ASR | `ASRAdapter` 接口；可接 Whisper/侧车转录；口语作答支持"文本转写+录音证据"契约 | 音素级发音置信度；逐词时间戳入 `Evidence` 并回放 |
+| 实操视频识别 | `video_stub` 基础版：音轨转写内容判分；动作/时序步骤证据不足转人工 | 接入姿态/动作识别模型；帧证据入 `Evidence` |
+| 实时发音 ASR | `ASRAdapter` 已接 faster-whisper(词级时间戳, 口语流畅层真算、视频音轨转写)；发音层待音素对齐 | 音素级发音置信度；逐词时间戳入 `Evidence` 并回放 |
 | IRT/BKT | 题目启发式参数(a/b)；已观测序列(≥2)上的 BKT 网格拟合与后验 | 真实题库参数标定 + 大规模跨轮时序训练 |
 | OCR 富文本坐标 | 填空/主观文本偏移 | 版面解析 + 坐标级证据 |
 | 数据库 | SQLite(默认轻量) | PostgreSQL(生产) |
 | 私有化部署 | `.env` 可替换模型 | 部署脚手架/容器化 |
 | 多模态证据展示 | 文本高亮 + 音频侧车 | 音/视频回放组件 |
 
-**如实边界**：报告与指标只呈现已实测的层；无数据层不评分、不产生无效分数（口语发音/流畅层、实操视频层均如此）。
+**如实边界**：报告与指标只呈现已实测的层；无数据层不评分、不产生无效分数（口语发音层、实操视频动作/时序层均如此；流畅层已接入 faster-whisper 真算）。

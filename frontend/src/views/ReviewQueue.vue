@@ -9,8 +9,12 @@
           <el-tag type="warning" effect="plain" size="small">双评待第 2 评：{{ dbl.await_second }}</el-tag>
           <el-tag type="danger" effect="plain" size="small">双评待仲裁：{{ dbl.await_arbitrate }}</el-tag>
         </div>
-        <el-radio-group v-model="level" size="default" @change="load">
-          <el-radio-button value="">全部({{ total }})</el-radio-button>
+        <el-radio-group v-model="scope" size="default" @change="load">
+          <el-radio-button value="todo">待复核({{ total }})</el-radio-button>
+          <el-radio-button value="reviewed">已评阅</el-radio-button>
+        </el-radio-group>
+        <el-radio-group v-if="scope === 'todo'" v-model="level" size="default" @change="load">
+          <el-radio-button value="">全部</el-radio-button>
           <el-radio-button value="forced">强制复核({{ counts.forced }})</el-radio-button>
           <el-radio-button value="sample">抽样复核({{ counts.sample }})</el-radio-button>
         </el-radio-group>
@@ -63,7 +67,7 @@
         <el-table-column label="操作" width="108" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" size="small" @click="$router.push(`/review/${row.id}`)">
-              {{ row.double && row.double.state === 'await_arbitrate' ? '去仲裁' : (row.double ? '评/复核' : '评阅/复核') }}
+              {{ scope === 'reviewed' ? '查看' : (row.double && row.double.state === 'await_arbitrate' ? '去仲裁' : (row.double ? '评/复核' : '评阅/复核')) }}
             </el-button>
           </template>
         </el-table-column>
@@ -80,6 +84,7 @@ import { LEVEL_LABELS, LEVEL_TAG, STATUS_LABELS, STATUS_TAG, DOUBLE_STATE_LABELS
 
 const items = ref([])
 const loading = ref(false)
+const scope = ref('todo')
 const level = ref('')
 const counts = reactive({ forced: 0, sample: 0 })
 const dbl = reactive({ await_second: 0, await_arbitrate: 0 })
@@ -90,6 +95,13 @@ function fmtTime(s) { return s ? s.replace('T', ' ').slice(0, 19) : '—' }
 async function load() {
   loading.value = true
   try {
+    if (scope.value === 'reviewed') {
+      // 已评阅(终审)卷只读查看
+      const res = await reviewQueue({ status: 'reviewed' })
+      items.value = res.items || []
+      total.value = res.total || 0
+      return
+    }
     const all = await reviewQueue({})
     total.value = all.total || 0
     counts.forced = all.levels?.forced || 0

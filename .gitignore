@@ -223,3 +223,7 @@ node_modules/
 /backend/data/
 *.db
 *.sqlite3
+
+# 大文件 / 上传素材不入库（GitHub 单文件限制 100MB）
+backend.zip
+/backend/uploads/

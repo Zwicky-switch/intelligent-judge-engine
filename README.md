@@ -2,7 +2,7 @@
 
 面向《多题型智能评阅与能力诊断引擎工程方案》的可交付实现：**证据优先的规则/模型协同评阅 + 教师复核仲裁(含双评/仲裁) + Q 矩阵能力诊断与个性化建议**。
 
-覆盖 8 类题型：单选 / 多选 / 判断 / 填空 / 数值 / 文本主观 / **公式(符号与数值抽样等价判定)** / 口语。客观题与公式题为 100% 确定性判分(金标准守护)，空答不静默给分、自动转人工复核；文本主观题 / 口语题由内置本地引擎完成评阅，开箱即用；配置 DeepSeek / 通义 / 智谱的 API Key 后自动切换为「规则定分 + 大模型判点复核与评语」的协同模式。**双评题**由两位独立教师背靠背评分、超差进入仲裁；**发布双人复核**保证量规与答案的变更需两个不同账号确认后才正式生效。
+覆盖 9 类题型：单选 / 多选 / 判断 / 填空 / 数值 / 文本主观 / **公式(符号与数值抽样等价判定)** / 口语 / **实操视频(音轨转写内容判分, 基础版)**。客观题与公式题为 100% 确定性判分(金标准守护)，空答不静默给分、自动转人工复核；文本主观题 / 口语题由内置本地引擎完成评阅，开箱即用；配置 DeepSeek / 通义 / 智谱的 API Key 后自动切换为「规则定分 + 大模型判点复核与评语」的协同模式。**双评题**由两位独立教师背靠背评分、超差进入仲裁；**发布双人复核**保证量规与答案的变更需两个不同账号确认后才正式生效。多媒体作答已接入：口语/视频上传由 **faster-whisper** 服务端自动转写（口语流畅层真算、实操视频基础版按音轨内容判分），图片作答经**视觉模型 OCR（智谱 glm-4v-flash 已配，失败自动回退本地 RapidOCR）**转文字后复用主观题判分；学生提交的原图/原录音/原视频全程留存，教师复评可回放核验。
 
 ---
 
@@ -14,7 +14,10 @@
 # ---- 后端(默认 127.0.0.1:8000) ----
 cd backend
 python -m venv .venv
-.venv\Scripts\pip install -r requirements.txt
+.venv\Scripts\python -m pip install -r requirements.txt
+# 可选: 安装 faster-whisper 启用服务端 ASR 自动转写(口语题录音无需前端誊抄文本, 流畅层按词级时间戳真算)
+#   首次运行会自动下载 Whisper small 模型(~460MB), 国内网络需先设镜像: set HF_ENDPOINT=https://hf-mirror.com
+.venv\Scripts\python -m pip install faster-whisper
 .venv\Scripts\python run.py
 # 首次启动: 自动建表并注入初始化示例数据(大学物理课程/题目/答卷并完成评阅)
 
@@ -56,10 +59,13 @@ npm run dev
 | 量规约束 | 大模型**只复核判点、不绕过量规给分**；分值一律按量规权重确定性结算并二次夹取 |
 | 人机协同 / 全程审计 | 教师保留 接受/改分/仲裁/退回 全权；每次操作写入 `audit_logs` 与 `review_records`，不可删除 |
 | 置信度路由 | 无法判断/证据冲突/低置信度 → 强制复核；抽样档可由教师接收；高分高信度主观题可按策略自动放行 |
-| 如实上报 | 未接入 ASR 评测源时，口语发音/流畅层如实标「无数据」，不产生无效评分；实操视频为接口预留、由人工按步骤量规评阅 |
+| 如实上报 | 口语发音层在未接入音素级对齐时如实标「无数据」；流畅层已接入 faster-whisper 词级时间戳真算；实操视频为基础版(音轨转写内容判分, 动作/时序步骤证据不足转人工)，不产生无效评分 |
 | 客观题确定判分 | 单选/多选(部分得分)/判断/填空/数值(单位换算·容差·有效数字)，金标准表 47 例全绿；空答/低质不静默给 0、转人工复核 |
 | 双评/仲裁 | 双评题两位教师背靠背独立评分，分差 ≤ 容差自动取均值终审，超差强制 `arbitrate` 由第三位教师仲裁 |
-| 发布质量门 | 发布(锁定量规)可设双人复核(需 ≥2 个不同账号)；历史版本快照 + 逐字段差异比较；量规模板一键套用 |
+| 发布质量门 | 发布(锁定量规)可设双人复核(需 ≥2 个不同账号)；已发布题可直接「重新发布」(版本+1、刷新发布时间，无需重新编辑)；历史版本快照 + 逐字段差异比较；量规模板一键套用 |
+| 题目生命周期 | 题目新增**发布时间**(发布动作自动写入)与**提交截止时间**(教师可配置/清空，学生端截止后禁用提交)；教务管理员可**删除题目并级联清理**全部答卷/成绩/版本/复核/上传文件(审计留痕)；已发布且已作答的题目修订再发布后，**重新出现在学生端题目列表**(学生按作答版本与当前版本比对) |
+| 媒体证据回放 | 教师复评/复核可回放学生**原图/原录音/原视频**(`GET /answers/{id}/media`，教师任意卷、学生限本人、目录越界防护)；历史旧路径 `content_uri` 提供幂等迁移脚本(`backend/_migrate_uri.py`)修复指向 |
+| 提交互斥 | 学生端同一时刻仅允许一道题提交判分，进行中的其他提交按钮全部禁用、函数级兜底拦截，**不可打断** |
 | 公式题 | 符号等价判定优先 `sympy`，无该依赖时以变量域数值抽样(相对误差 <1e-6)兜底，结果幂等 |
 | 能力诊断 | 60 维能力全景(支持按课程停用维度)、知识节点 BKT 时序掌握度、画像-作答匹配度 `profile_match` |
 | 质量指标 | 延迟(p50/p95/max)、客观题守门准确率、engine↔教师终审一致率、分数段校准与温度拟合、双评教师间一致性 |
@@ -69,10 +75,10 @@ npm run dev
 
 ## 3. 角色与工作台(前端)
 
-- **命题教师**：题库管理(新建/编辑/发布/停用，量规与答案编辑器；公式题可编辑期望式与变量域)、量规模板套用、发布历史版本比较、双人复核发布进度跟踪、知识图谱与 6×10 能力维度体系 + 按课程停用维度开关。
-- **阅卷教师**：复核中心(强制/抽样两档队列；双评题按「待第 1 评 / 待第 2 评 / 待仲裁」阶段分组并展示已收独立分)、评阅工作台(作答原文证据高亮、逐得分点判定、接受/改分/仲裁/退回；双评题按「第 1 评 / 第 2 评 / 仲裁」分阶段操作并展示另一方独立分)。
-- **教务管理员**：质量看板(自动放行率/教师终审率/得分率分布/班级六域画像/题目表现 + 客观守门准确率、engine↔教师一致率、延迟、分数段校准与温度拟合、双评教师间一致性)、审计日志。
-- **学生**：我的成绩(逐题得分 + 证据展开；口语题四层表现)、自主练习(客观题即时反馈 + 主观文本/公式送复核 + 口语文本转写并可选附录音证据)、能力诊断报告(六域雷达 + 知识节点掌握度/BKT 时序 + 知识热力图 + 60 维能力全景 + 短板 Top3 + 先修/微课/练习建议 + 画像-作答匹配度)。
+- **命题教师**：题库管理(新建/编辑/发布/停用/删除，量规与答案编辑器；公式题可编辑期望式与变量域)、量规模板套用、发布历史版本比较、双人复核发布进度跟踪、知识图谱与 6×10 能力维度体系 + 按课程停用维度开关；已发布题可点「重新发布」直接再发布(版本+1)，题目可单独配置提交截止时间。
+- **阅卷教师**：复核中心(待复核队列按 强制/抽样 两档，双评题按「待第 1 评 / 待第 2 评 / 待仲裁」阶段分组并展示已收独立分；新增「已评阅」页签可只读回看全部已终审卷)、评阅工作台(作答原文证据高亮、**直接回放学生原图/原录音/原视频**、逐得分点判定、接受/改分/仲裁/退回；双评题按「第 1 评 / 第 2 评 / 仲裁」分阶段操作并展示另一方独立分；已终审卷只读、不再显示改分操作)。
+- **教务管理员**：质量看板(自动放行率/教师终审率/得分率分布/班级六域画像/题目表现 + 客观守门准确率、engine↔教师一致率、延迟、分数段校准与温度拟合、双评教师间一致性)、审计日志、题目删除(级联清理该题全部数据)。
+- **学生**：我的成绩(逐题得分 + 证据展开；口语题四层表现)、题目(客观题即时反馈 + 主观文本/公式送复核 + 口语文本转写并可选附录音证据 + 图片/视频作答；题目可设提交截止时间，截止后禁用提交；**同一时刻只允许一道题提交判分，不可打断**)、能力诊断报告(六域雷达 + 知识节点掌握度/BKT 时序 + 知识热力图 + 60 维能力全景 + 短板 Top3 + 先修/微课/练习建议 + 画像-作答匹配度)。
 - **全角色共享**：侧边栏「引擎技术导览」(`/engine`)一页讲清 提交→门控→量规协同评阅→证据→双评复核仲裁→能力诊断 的处理闭环，并按登录角色给出数据入口；顶栏「技术铭牌」实时显示当前评阅模型与引擎版本(`GET /v1/meta`)。
 
 ---
@@ -88,8 +94,8 @@ intelligent-judge-engine/
 │   │   ├── models/               # User/Course/Chapter/KnowledgeNode/SkillDomain/SkillDimension
 │   │   │                         # Item/ItemVersion/Answer/Evidence/Score/ReviewRecord/AuditLog/Diagnosis/AssessmentJob
 │   │   │                         # RubricTemplate/PublishApproval/CourseDimensionToggle
-│   │   ├── engines/              # objective / numeric / subjective / spoken / symbolic(公式) / video(实操, 接口预留)
-│   │   ├── parsers/              # 答案质量门控 / ASR 适配 / 音频上传
+│   │   ├── engines/              # objective / numeric / subjective / spoken / symbolic(公式) / video(实操, 基础版: 音轨转写内容判分)
+│   │   ├── parsers/              # 答案质量门控 / ASR 适配(口语+视频音轨) / 图片 OCR(视觉模型+RapidOCR 兜底) / 音频上传
 │   │   ├── llm/                  # 外部模型适配(deepseek/qwen/zhipu) + 内置引擎 + 强制 JSON + 量规约束提示词
 │   │   ├── orchestrator/         # runner(编排+置信度路由) / review(复核·双评仲裁·审计) / jobs(批量任务)
 │   │   ├── diagnostics/          # qmatrix / mastery(掌握度·能力向量·置信度) / bkt(时序掌握) / calibration(校准) / irt(2PL) / recommender
@@ -124,6 +130,32 @@ GRADE_LLM_MODEL=deepseek-chat
 2. 大模型在**量规分数约束内**复核判点类别、给出罚分建议与中文评语(JSON 结构化输出，返回后按量规二次夹取)；
 3. 置信度取本地与模型混合值，仍走统一复核路由。
 
+### 图片作答(识图转文字 OCR)
+
+主观题支持上传手写/截图作答：`POST /answers/image`(multipart: item_id + image) → 服务端提取图片文字 → 复用主观题判分引擎打分，原图留存为证据。识别链路**视觉模型优先、本地 OCR 兜底**：
+
+- 视觉模型（已配智谱 glm-4v-flash，免费额度）：手写/截图识别效果好；可切换通义 qwen-vl-plus 或自定义 OpenAI 兼容视觉模型
+- 视觉模型未配置或调用失败 → 自动回退本地 **RapidOCR**（`pip install rapidocr-onnxruntime`，离线可用，印刷体效果好）
+- 两者都不可用才返回 422 并给出配置指引，不静默降级
+
+```
+# .env(已配智谱视觉 Key 时无需再改; 仅列参考)
+OCR_LLM_PROVIDER=zhipu            # 或 qwen
+OCR_LLM_API_KEY=xxxxxxxx
+OCR_LLM_BASE_URL=https://open.bigmodel.cn/api/paas/v4
+OCR_LLM_MODEL=glm-4v-flash
+```
+
+### 视频作答(实操视频题, 基础版)
+
+`POST /answers/video`(multipart: item_id + video, 支持 mp4/mov/webm 等) → 服务端用 faster-whisper **直接转写视频音轨**(PyAV 解码, 无需 ffmpeg) → 按步骤量规关键词对"内容覆盖"维度自动判分。
+
+- 量规中**配置了 keywords** 的步骤按转写文本判 满足/部分/不满足 并给分；
+- **未配置 keywords** 的动作/时序步骤标记"证据不足"，不自动扣分，整卷转人工按视频补齐评定(强制复核兜底)；
+- 无音轨转写(静音视频)同样转人工，不自动给 0 分。
+
+基础版不含姿态估计/动作识别/时序对齐(属后续规划)，动作类步骤最终分以教师人工评定为准。
+
 未配置外部模型 Key 时，主观题/口语题由内置本地引擎完成启发式判点与评语，公式题/客观题始终由确定性引擎判分——系统在任何配置下均可完整运行。
 
 ---
@@ -132,9 +164,9 @@ GRADE_LLM_MODEL=deepseek-chat
 
 - 认证：`POST /auth/login`、`GET /auth/me`
 - 课程/图谱：`GET /courses`、`GET /courses/{id}/knowledge`、`GET /dimensions`、`GET /ability-domains`、`GET/PUT /courses/{id}/dimensions`(按课程停用能力维度)
-- 题库：`GET/POST /items`、`GET /items/types`、`GET/PUT /items/{id}`、`POST /items/{id}/publish|toggle`；`GET/POST/PUT/DELETE /rubric-templates`(量规模板)；`GET /items/{id}/versions`、`GET /items/{id}/versions/compare?v1=&v2=`(版本快照与差异)
-- 答卷与评阅：`POST /answers`(提交即评，支持 multipart 附录音)、`GET /practice/items`(学生练习：客观/主观/公式/口语转写)、`POST /assessments/run` + `GET /assessments/{job_id}`
-- 成绩/复核：`GET /scores`、`GET /scores/overview/{token}`、`GET /scores/{id}`、`GET /reviews/queue|recent`(含双评阶段分组)、`POST /reviews/{score_id}`(accept/adjust/arbitrate/return_model，双评按状态机流转)
+- 题库：`GET/POST /items`、`GET /items/types`、`GET/PUT /items/{id}`、`DELETE /items/{id}`(仅教务管理员，级联删除该题全部数据)、`POST /items/{id}/publish|toggle`；`GET/POST/PUT/DELETE /rubric-templates`(量规模板)；`GET /items/{id}/versions`、`GET /items/{id}/versions/compare?v1=&v2=`(版本快照与差异)
+- 答卷与评阅：`POST /answers`(提交即评)、`POST /answers/audio`(口语录音, faster-whisper 自动转写)、`POST /answers/image`(图片作答, 视觉模型+RapidOCR)、`POST /answers/video`(实操视频, 音轨转写判分)、`GET /answers/{id}/media`(媒体证据回放)、`GET /practice/items`(学生题目列表：客观/主观/公式/口语/视频，含作答版本与当前版本、提交截止)、`POST /assessments/run` + `GET /assessments/{job_id}`
+- 成绩/复核：`GET /scores`、`GET /scores/overview/{token}`、`GET /scores/{id}`、`GET /reviews/queue?status=needs_review|reviewed`(待复核队列与已评阅卷，含双评阶段分组)、`POST /reviews/{score_id}`(accept/adjust/arbitrate/return_model，双评按状态机流转)
 - 诊断/指标/审计：`GET /diagnosis/{student_token}`、`GET /diagnosis/mine/current`(60 维全景/profile_match/BKT)、`GET /metrics/quality`(延迟/守门准确率/一致率/校准/双评一致性)、`GET /audit`
 - 引擎信息：`GET /meta` —— `model_version / llm_provider / llm_model / has_api_key / review_threshold / auto_release_objective / note`
 
@@ -156,7 +188,7 @@ npm run build                               # 构建通过
 
 ## 8. 版本路线图(后续规划能力)
 
-以下能力已完成接口预留并如实标注，不产生无效判定：
+以下能力已按最新状态如实标注（未接入的部分不产生无效判定）：
 
-- 实操视频姿态识别(当前由教师按步骤量规人工评阅)、实时音素级发音评测 ASR(口语作答支持「文本转写 + 录音证据」契约，录音可回放)、大规模真实题库的 IRT/BKT 参数标定与训练(当前为题目启发式参数 + 已观测作答序列上的 BKT 拟合)、OCR 富文本坐标级识别。
+- 实操视频**姿态识别/动作时序对齐**：当前为基础版(音轨转写内容判分)，姿态识别待接入；实时**音素级发音评测**：当前流畅层已接 faster-whisper 词级时间戳真算，发音层需音素对齐后启用；大规模真实题库的 IRT/BKT 参数标定与训练(当前为题目启发式参数 + 已观测作答序列上的 BKT 拟合)；OCR 富文本坐标级识别(当前为整图文本提取)。
 - 详见 `docs/architecture.md` 的「能力扩展点」一节。

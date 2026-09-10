@@ -250,14 +250,22 @@ def _items() -> list[dict]:
                                        "expression": 0.25, "content": 0.25}},
             difficulty=0.3, discrimination=1.0),
 
-        # ---------- 实操视频题(阶段 2 接口占位) ----------
+        # ---------- 实操视频题(基础版: 音轨转写内容判分 + 动作步骤转人工) ----------
         _it("PHY-2026-040", T_VIDEO, "功与能量",
             "实验：用打点计时器验证机械能守恒。请按规范完成安装、操作、读数与数据处理，并上传过程视频。", 10,
             {}, [
-                {"step_id": "S1", "description": "正确安装打点计时器、纸带与重物，并接通电源"},
-                {"step_id": "S2", "description": "先通电后释放纸带，操作顺序规范"},
-                {"step_id": "S3", "description": "正确选取计数点并读取、记录数据"},
-                {"step_id": "S4", "description": "计算验证机械能守恒，并分析误差来源"},
+                {"step_id": "S1", "score": 3,
+                 "description": "正确安装打点计时器、纸带与重物，并接通电源",
+                 "keywords": ["打点计时器", "纸带", "重物", "电源"]},
+                {"step_id": "S2", "score": 2,
+                 "description": "先通电后释放纸带，操作顺序规范",
+                 "keywords": ["通电", "释放", "先通电", "纸带"]},
+                {"step_id": "S3", "score": 2,
+                 "description": "正确选取计数点并读取、记录数据",
+                 "keywords": ["计数点", "读数", "刻度尺", "记录"]},
+                {"step_id": "S4", "score": 3,
+                 "description": "计算验证机械能守恒，并分析误差来源",
+                 "keywords": ["机械能守恒", "误差", "动能", "重力势能", "计算"]},
             ], "", ["K-机械能守恒"],
             {"K-机械能守恒": {"dimension": "PR3", "weight": 1.0}},
             policy={"review_threshold": 0.8}, difficulty=1.5, discrimination=1.2),

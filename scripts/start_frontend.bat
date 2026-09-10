@@ -1,17 +1,15 @@
 @echo off
 setlocal
 cd /d "%~dp0..\frontend"
-
 if not exist "node_modules" (
-  echo [Init] é¦–æ¬¡è¿è¡Œ, æ­£åœ¨ npm install ...
+  echo [Init] Ê×´ÎÔËĞĞ, ÕıÔÚ npm install ...
   call npm install
 )
-
 echo.
 echo ============================================================
-echo   æ™ºè¯„ Insight å‰ç«¯å¯åŠ¨:  http://127.0.0.1:5173
-echo   (å¼€å‘ä»£ç† /v1 -^> http://127.0.0.1:8000, è¯·å…ˆå¯åŠ¨åç«¯)
-echo   æ³¨æ„: è¯·ç”¨æµè§ˆå™¨è®¿é—®ä¸Šé¢çš„åœ°å€, ä¸è¦åŒå‡» frontend\index.html
+echo   ÖÇÆÀ Insight Ç°¶ËÆô¶¯:  http://127.0.0.1:5173
+echo   (¿ª·¢´úÀí /v1 -^> http://127.0.0.1:8000, ÇëÏÈÆô¶¯ºó¶Ë)
+echo   ×¢Òâ: ÇëÓÃä¯ÀÀÆ÷·ÃÎÊÉÏÃæµÄµØÖ·, ²»ÒªË«»÷ frontend\index.html
 echo ============================================================
 call npm run dev
 endlocal

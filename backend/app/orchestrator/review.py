@@ -238,10 +238,14 @@ def apply_review(db: Session, score_id: int, action: str, teacher_username: str,
 
 
 def list_review_queue(db: Session, review_level: str | None = None,
-                      item_type: str | None = None):
+                      item_type: str | None = None,
+                      status: str | None = "needs_review"):
     q = db.query(Score, Answer, Item).join(Answer, Answer.id == Score.answer_id) \
-        .join(Item, Item.id == Score.item_id) \
-        .filter(Score.status == ST_NEEDS_REVIEW)
+        .join(Item, Item.id == Score.item_id)
+    if status:
+        q = q.filter(Score.status == status)
+    elif status is None:
+        pass  # None = 不过滤(全部)
     if review_level:
         q = q.filter(Score.review_level == review_level)
     if item_type:

@@ -8,7 +8,7 @@
             <div class="stat-card"><div class="lbl">平均得分率</div><div class="num">{{ fmtPct(avgRatio) }}</div></div>
             <div class="stat-card"><div class="lbl">待教师复核</div><div class="num" style="color:#f0a020">{{ needReview }}</div></div>
           </div>
-          <el-empty v-else :image-size="80" description="还没有作答记录，去「自主练习」做一题吧" />
+          <el-empty v-else :image-size="80" description="还没有作答记录，去「题目」做一题吧" />
 
           <el-collapse v-if="attempts.length" v-model="openIds" class="attempts">
             <el-collapse-item v-for="at in attempts" :key="at.score.id" :name="at.score.id">
@@ -29,17 +29,18 @@
                   <el-descriptions-item label="模型版本">{{ at.score.model_version }}</el-descriptions-item>
                   <el-descriptions-item label="置信度">{{ fmtPct(at.score.confidence) }}</el-descriptions-item>
                 </el-descriptions>
-                <ScoreBreakdown :answer-text="answerTextOf(at)" :score="at.score" />
+                <ScoreBreakdown :answer-text="answerTextOf(at)" :score="at.score"
+                                :answer-id="at.score?.answer_id" :item-type="at.item?.type" />
               </div>
             </el-collapse-item>
           </el-collapse>
         </div>
       </el-tab-pane>
 
-      <el-tab-pane label="自主练习" name="practice">
+      <el-tab-pane label="题目" name="practice">
         <div class="card" v-loading="pLoading">
           <div class="sub-head">
-            <b>自主练习</b>
+            <b>题目</b>
             <span class="muted">客观题即时判定；主观/口语/公式题送教师复核后给出终审成绩</span>
           </div>
           <div v-for="it in practiceList" :key="it.id" class="practice-card">
@@ -47,6 +48,9 @@
               <span class="mono code">{{ it.code }}</span>
               <el-tag size="small" effect="plain">{{ it.type_label }}</el-tag>
               <span class="muted">满分 {{ fmtScore(it.max_score) }} · {{ it.chapter_name }}</span>
+              <span v-if="it.submit_deadline" class="muted small" :class="{ 'deadline-close': isExpired(it) }">
+                {{ isExpired(it) ? '已截止' : '截止 ' + fmtDt(it.submit_deadline) }}
+              </span>
               <span class="spacer" />
               <el-tag v-if="it.answered" size="small" type="success">已作答</el-tag>
             </div>
@@ -67,9 +71,17 @@
             <!-- 数值 / 填空 -->
             <el-input v-else-if="it.type === 'numeric'" v-model="answers[it.id]" placeholder="输入数值(可带单位，如 5 m/s^2)" style="max-width:340px" />
             <el-input v-else-if="it.type === 'fill_blank'" v-model="answers[it.id]" placeholder="多个空用 | 分隔，如: ma|N|惯性" style="max-width:380px" />
-            <!-- 文本主观题 -->
-            <el-input v-else-if="it.type === 'subjective_text'" v-model="answers[it.id]" type="textarea" :rows="5"
-                      placeholder="分点写出你的推导/说理过程(越长越完整，判分依据关键词与逻辑)" />
+            <!-- 文本主观题: 文本输入 + 可选拍照/上传手写图片(服务端 OCR 转文字后自动判分) -->
+            <template v-else-if="it.type === 'subjective_text'">
+              <el-input v-model="answers[it.id]" type="textarea" :rows="5"
+                        placeholder="分点写出你的推导/说理过程(越长越完整，判分依据关键词与逻辑)" />
+              <div class="audio-row img-row">
+                <el-button size="small" @click="pickImage(it)">上传手写图片(OCR 自动识别判分)</el-button>
+                <span class="muted small" v-if="imageNames[it.id]">已选：{{ imageNames[it.id] }}</span>
+                <span v-else class="muted small">可上传手写/截图作答，系统用视觉模型识别文字后按主观题判分</span>
+                <input :ref="(el) => setImageInput(it.id, el)" type="file" accept="image/*" style="display:none" @change="(e) => onPickImage(it, e)" />
+              </div>
+            </template>
             <!-- 公式符号化题 -->
             <el-input v-else-if="it.type === 'formula'" v-model="answers[it.id]"
                       placeholder="输入字母表达式，如 F/m、a=(x+y)^2(用 * / ^ 或 ×÷)" style="max-width:420px" />
@@ -84,10 +96,17 @@
                 <input :ref="(el) => setAudioInput(it.id, el)" type="file" accept="audio/*" style="display:none" @change="(e) => onPickAudio(it, e)" />
               </div>
             </div>
+            <!-- 实操视频题: 上传过程视频, 服务端转写音轨后按步骤量规判分 -->
+            <div v-else-if="it.type === 'practical_video'" class="audio-row">
+              <el-button size="small" @click="pickVideo(it)">上传过程视频</el-button>
+              <span class="muted small" v-if="videoNames[it.id]">已选：{{ videoNames[it.id] }}</span>
+              <span v-else class="muted small">上传实验过程视频(mp4/mov/webm)，系统转写音轨后按步骤量规自动判分</span>
+              <input :ref="(el) => setVideoInput(it.id, el)" type="file" accept="video/*" style="display:none" @change="(e) => onPickVideo(it, e)" />
+            </div>
             <el-input v-else v-model="answers[it.id]" placeholder="输入作答" style="max-width:380px" />
 
             <div class="pc-actions">
-              <el-button type="primary" size="small" :disabled="!answers[it.id]" :loading="submittingId === it.id"
+              <el-button type="primary" size="small" :disabled="!hasAnswer(it) || isExpired(it) || !!submittingId" :loading="submittingId === it.id"
                          @click="submit(it)">{{ canSubmitText(it) ? '提交' : '提交判分' }}</el-button>
               <span v-if="lastResult && lastResult.item_id === it.id" class="result">
                 <el-tag :type="scoreTag" size="small">{{ scoreLabel }}</el-tag>
@@ -106,7 +125,7 @@
 <script setup>
 import { ref, computed, onMounted, reactive } from 'vue'
 import { ElMessage } from 'element-plus'
-import { studentOverview, practiceItems, submitAnswer, submitAnswerAudio } from '@/api'
+import { studentOverview, practiceItems, submitAnswer, submitAnswerAudio, submitAnswerImage, submitAnswerVideo } from '@/api'
 import { useAuthStore } from '@/stores/auth'
 import ScoreBreakdown from '@/components/ScoreBreakdown.vue'
 import { STATUS_LABELS, STATUS_TAG, SPOKEN_LAYER_LABELS, fmtScore, fmtPct } from '@/utils/const'
@@ -126,6 +145,12 @@ const answers = reactive({})
 const audioFiles = reactive({})
 const audioNames = reactive({})
 const audioInputs = {}
+const imageFiles = reactive({})
+const imageNames = reactive({})
+const imageInputs = {}
+const videoFiles = reactive({})
+const videoNames = reactive({})
+const videoInputs = {}
 const submittingId = ref(null)
 const lastResult = ref(null)
 
@@ -166,6 +191,24 @@ function canSubmitText(it) {
   return ['subjective_text', 'spoken', 'formula'].includes(it.type)
 }
 
+// 该题是否有可提交内容: 文本或已选文件(图片/音频/视频)均可直接提交
+function hasAnswer(it) {
+  if (it.type === 'spoken') return !!(answers[it.id] || audioFiles[it.id])
+  if (it.type === 'subjective_text') return !!(answers[it.id] || imageFiles[it.id])
+  if (it.type === 'practical_video') return !!videoFiles[it.id]
+  return !!answers[it.id]
+}
+
+function fmtDt(s) {
+  return s ? String(s).replace('T', ' ').slice(0, 16) : '—'
+}
+// 提交截止: 已过截止返回 true(禁用提交按钮并展示"已截止")
+function isExpired(it) {
+  if (!it.submit_deadline) return false
+  const dl = new Date(it.submit_deadline.replace(' ', 'T'))
+  return Date.now() > dl.getTime()
+}
+
 function setAudioInput(id, el) {
   if (el) audioInputs[id] = el
 }
@@ -178,6 +221,36 @@ function onPickAudio(it, e) {
   if (!file) return
   audioFiles[it.id] = file
   audioNames[it.id] = file.name
+  e.target.value = ''   // 允许重复选择同一文件
+}
+
+function setImageInput(id, el) {
+  if (el) imageInputs[id] = el
+}
+function pickImage(it) {
+  const input = imageInputs[it.id]
+  if (input) input.click()
+}
+function onPickImage(it, e) {
+  const file = e.target.files && e.target.files[0]
+  if (!file) return
+  imageFiles[it.id] = file
+  imageNames[it.id] = file.name
+  e.target.value = ''   // 允许重复选择同一文件
+}
+
+function setVideoInput(id, el) {
+  if (el) videoInputs[id] = el
+}
+function pickVideo(it) {
+  const input = videoInputs[it.id]
+  if (input) input.click()
+}
+function onPickVideo(it, e) {
+  const file = e.target.files && e.target.files[0]
+  if (!file) return
+  videoFiles[it.id] = file
+  videoNames[it.id] = file.name
   e.target.value = ''   // 允许重复选择同一文件
 }
 
@@ -210,6 +283,11 @@ const spokenSummary = computed(() => {
 })
 
 async function submit(it) {
+  // 提交不可打断: 已有题目正在提交时, 忽略新的提交点击, 待当前完成后自动恢复
+  if (submittingId.value) {
+    ElMessage.warning('已有题目正在提交判分，请等待完成后再次提交')
+    return
+  }
   submittingId.value = it.id
   try {
     let res
@@ -221,6 +299,18 @@ async function submit(it) {
       fd.append('asr_note', 'manual_transcript')
       fd.append('audio', audioFiles[it.id])
       res = await submitAnswerAudio(fd)
+    } else if (it.type === 'subjective_text' && imageFiles[it.id]) {
+      // 图片作答契约: 只传图片, 服务端 OCR 转文字后判分
+      const fd = new FormData()
+      fd.append('item_id', it.id)
+      fd.append('image', imageFiles[it.id])
+      res = await submitAnswerImage(fd)
+    } else if (it.type === 'practical_video' && videoFiles[it.id]) {
+      // 视频作答契约(基础版): 只传视频, 服务端转写音轨后按步骤量规判分
+      const fd = new FormData()
+      fd.append('item_id', it.id)
+      fd.append('video', videoFiles[it.id])
+      res = await submitAnswerVideo(fd)
     } else {
       res = await submitAnswer(answerPayload(it))
     }
@@ -237,7 +327,10 @@ async function loadPractice() {
   pLoading.value = true
   try {
     const res = await practiceItems()
-    practiceList.value = (res.items || []).filter((it) => !it.answered)
+    // 已作答且版本未更新的题目从列表隐藏; 教师修订重新发布(出新版本)后重新出现
+    practiceList.value = (res.items || []).filter(
+      (it) => !(it.answered && (it.answered_version ?? 0) >= (it.current_version ?? 1)),
+    )
     res.items.forEach((it) => {
       if (it.type === 'multiple_choice') answers[it.id] = answers[it.id] || []
     })
@@ -260,6 +353,7 @@ onMounted(() => {
 .mono { font-family: Consolas, Menlo, monospace; }
 .code { font-size: 12px; color: #606266; }
 .small { font-size: 12px; }
+.deadline-close { color: #f56c6c; font-weight: 600; }
 .practice-card { border: 1px solid #ebeef5; border-radius: 8px; padding: 14px 16px; margin-bottom: 14px; background: #fafbfc; }
 .pc-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .spacer { flex: 1; }
@@ -268,6 +362,7 @@ onMounted(() => {
 .choice { margin-right: 16px; }
 .spoken-box { display: flex; flex-direction: column; gap: 8px; max-width: 640px; }
 .audio-row { display: flex; align-items: center; gap: 10px; }
+.img-row { margin-top: 8px; max-width: 640px; flex-wrap: wrap; }
 .pc-actions { display: flex; align-items: center; gap: 12px; margin-top: 8px; }
 .result { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 </style>

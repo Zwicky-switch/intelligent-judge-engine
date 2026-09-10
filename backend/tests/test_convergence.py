@@ -117,13 +117,13 @@ def _fresh_student_token(client: TestClient) -> str:
 
 
 def test_m3_practice_items_cover_subjective_spoken_without_leaks(client, tokens):
-    """练习列表向(未作答)学生开放主观/口语题, 但绝不泄露 答案/量规/参考答案/术语库."""
+    """练习列表向(未作答)学生开放主观/口语/视频题, 但绝不泄露 答案/量规/参考答案/术语库."""
     r = client.get("/v1/practice/items", headers=_auth(_fresh_student_token(client)))
     assert r.status_code == 200, r.text
     items = r.json()["items"]
     types = {i["type"] for i in items}
     assert "subjective_text" in types and "spoken" in types
-    assert "practical_video" not in types   # 阶段 2 接口占位不放进学生练习
+    assert "practical_video" in types   # 视频基础版已上线: 学生练习区可上传视频作答
     by_code = {i["code"]: i for i in items}
     assert "PHY-2026-020" in by_code and "PHY-2026-030" in by_code
     assert by_code["PHY-2026-020"]["modality"] == "text"
@@ -243,11 +243,15 @@ def test_m4_audio_upload_contract(client, tokens):
 
 
 def test_m4_audio_upload_without_transcript_offline_is_422(client, tokens):
-    """未随附转写且未装 faster-whisper -> 明确 422, 不落盘、不评卷."""
+    """未随附转写且无可用 ASR(如未安装 faster-whisper) -> 明确 422, 不落盘、不评卷."""
+    from unittest import mock
+
     it = _item_by_code(client, tokens["prop"], "PHY-2026-030")
-    res = client.post("/v1/answers/audio", headers=_auth(tokens["li"]),
-                      data={"item_id": str(it["id"]), "content": ""},
-                      files={"audio": ("blank.wav", _tiny_wav(), "audio/wav")})
+    # 用 mock 模拟"无 ASR 适配器"环境, 与测试机是否装了 faster-whisper 解耦
+    with mock.patch("app.api.answers.get_asr", return_value=None):
+        res = client.post("/v1/answers/audio", headers=_auth(tokens["li"]),
+                          data={"item_id": str(it["id"]), "content": ""},
+                          files={"audio": ("blank.wav", _tiny_wav(), "audio/wav")})
     assert res.status_code == 422, res.text
     assert "faster-whisper" in res.text or "人工誊抄" in res.text
 

@@ -37,6 +37,10 @@ class Item(TimestampMixin, Base):
     discrimination: Mapped[float] = mapped_column(Float, default=1.0)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     published: Mapped[bool] = mapped_column(Boolean, default=False)
+    # 发布时间(最近一次真正发布/修订发布的时刻, 发布动作自动写入)
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # 提交截止时间(教师配置, 空=不限时; 学生端超时禁止提交且后端校验)
+    submit_deadline: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     current_version: Mapped[int] = mapped_column(Integer, default=1)
     created_by: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
