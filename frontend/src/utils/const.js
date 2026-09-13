@@ -133,7 +133,7 @@ export const PROVIDER_LABELS = {
 }
 export const PROVIDER_LABEL_OF = (code) =>
   (code && PROVIDER_LABELS[code]) || code || '内置本地引擎'
-// 是否外部模型在驱动: 内置引擎视为本地, 其余需配合 has_api_key 判定在线。
+// 是否外部模型在驱动: 内置引擎视为本地, 其余视为外部模型在线。
 export const isExternalProvider = (code) => !!code && code !== 'builtin'
 
 export const fmtScore = (v) => (v === null || v === undefined ? '—' : Number(v).toFixed(1))

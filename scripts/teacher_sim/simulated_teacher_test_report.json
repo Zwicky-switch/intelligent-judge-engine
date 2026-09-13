@@ -1,0 +1,587 @@
+{
+  "test_design": {
+    "method": "引擎判分 vs 关键字对照法教师二审",
+    "note": "教师二审为标准答案关键字对照模拟, 非真实教师评分; 适用于基础低开放性题目",
+    "item_count": 3,
+    "answer_count": 9,
+    "levels": [
+      "strong",
+      "mid",
+      "weak"
+    ]
+  },
+  "summary": {
+    "total": 9,
+    "consistent_within_1": 8,
+    "consistency_rate": 0.8889,
+    "avg_abs_diff": 1.2222,
+    "engine_avg": 3.1111,
+    "teacher_avg": 3.4444
+  },
+  "details": [
+    {
+      "item_id": "T1",
+      "item_title": "质量 m=2kg 的物体在水平面上受到 F=10N 的水平拉力，物体与地面间动摩擦因数 μ=0.2，取 g=10m/s²。求物体的加速度大小。",
+      "level": "strong",
+      "answer": "根据牛顿第二定律 F合=ma。先求摩擦力：竖直方向 N=mg=2×10=20N，滑动摩擦力 f=μN=0.2×20=4N。水平方向合外力 F合=F-f=10-4=6N。所以加速度 a=F合/m=6/2=3m/s²。",
+      "engine_score": 5.0,
+      "engine_confidence": 0.638,
+      "engine_review_level": "forced",
+      "engine_point_results": [
+        {
+          "point_id": "P1",
+          "earned": 1.0,
+          "status": "partial",
+          "reason": "部分覆盖得分点要点(覆盖率 50%), 表述/前提不完整 | 未命中: F=ma、合外力等于、ma"
+        },
+        {
+          "point_id": "P2",
+          "earned": 1.0,
+          "status": "partial",
+          "reason": "部分覆盖得分点要点(覆盖率 62%), 表述/前提不完整 | 未命中: μmg、4 N"
+        },
+        {
+          "point_id": "P3",
+          "earned": 2.0,
+          "status": "satisfied",
+          "reason": "覆盖得分点要点(覆盖率 80%) | 未命中: 6 N"
+        },
+        {
+          "point_id": "P4",
+          "earned": 1.0,
+          "status": "partial",
+          "reason": "部分覆盖得分点要点(覆盖率 71%), 表述/前提不完整 | 未命中: 3 m/s"
+        }
+      ],
+      "teacher_score": 8.0,
+      "teacher_point_results": [
+        {
+          "point_id": "P1",
+          "description": "写出牛顿第二定律 F合=ma 或等价表述",
+          "max_score": 2.0,
+          "earned": 2.0,
+          "verdict": "satisfied",
+          "reason": "教师判定: 关键字覆盖60%, 满分"
+        },
+        {
+          "point_id": "P2",
+          "description": "正确计算摩擦力 f=μmg=4N",
+          "max_score": 2.0,
+          "earned": 2.0,
+          "verdict": "satisfied",
+          "reason": "教师判定: 关键字覆盖67%, 满分"
+        },
+        {
+          "point_id": "P3",
+          "description": "正确计算合外力 F合=F-f=6N",
+          "max_score": 2.0,
+          "earned": 2.0,
+          "verdict": "satisfied",
+          "reason": "教师判定: 关键字覆盖80%, 满分"
+        },
+        {
+          "point_id": "P4",
+          "description": "正确计算加速度 a=3m/s²",
+          "max_score": 2.0,
+          "earned": 2.0,
+          "verdict": "satisfied",
+          "reason": "教师判定: 关键字覆盖80%, 满分"
+        }
+      ],
+      "diff": 3.0,
+      "within_1": false
+    },
+    {
+      "item_id": "T1",
+      "item_title": "质量 m=2kg 的物体在水平面上受到 F=10N 的水平拉力，物体与地面间动摩擦因数 μ=0.2，取 g=10m/s²。求物体的加速度大小。",
+      "level": "mid",
+      "answer": "用牛顿第二定律来做。摩擦力 f=μmg=0.2×2×10=4N。合力就是 10-4=6N。加速度 a=6/2=3m/s²。",
+      "engine_score": 4.0,
+      "engine_confidence": 0.55,
+      "engine_review_level": "forced",
+      "engine_point_results": [
+        {
+          "point_id": "P1",
+          "earned": 1.0,
+          "status": "partial",
+          "reason": "部分覆盖得分点要点(覆盖率 27%), 表述/前提不完整 | 未命中: F合=ma、F=ma、合外力等于、ma"
+        },
+        {
+          "point_id": "P2",
+          "earned": 1.0,
+          "status": "partial",
+          "reason": "部分覆盖得分点要点(覆盖率 69%), 表述/前提不完整 | 未命中: μN、4 N"
+        },
+        {
+          "point_id": "P3",
+          "earned": 1.0,
+          "status": "partial",
+          "reason": "部分覆盖得分点要点(覆盖率 40%), 表述/前提不完整 | 未命中: 合外力、F-f、6 N"
+        },
+        {
+          "point_id": "P4",
+          "earned": 1.0,
+          "status": "partial",
+          "reason": "部分覆盖得分点要点(覆盖率 71%), 表述/前提不完整 | 未命中: 3 m/s"
+        }
+      ],
+      "teacher_score": 5.0,
+      "teacher_point_results": [
+        {
+          "point_id": "P1",
+          "description": "写出牛顿第二定律 F合=ma 或等价表述",
+          "max_score": 2.0,
+          "earned": 0.0,
+          "verdict": "unsatisfied",
+          "reason": "教师判定: 关键字覆盖20%, 不得分"
+        },
+        {
+          "point_id": "P2",
+          "description": "正确计算摩擦力 f=μmg=4N",
+          "max_score": 2.0,
+          "earned": 2.0,
+          "verdict": "satisfied",
+          "reason": "教师判定: 关键字覆盖67%, 满分"
+        },
+        {
+          "point_id": "P3",
+          "description": "正确计算合外力 F合=F-f=6N",
+          "max_score": 2.0,
+          "earned": 1.0,
+          "verdict": "partial",
+          "reason": "教师判定: 关键字覆盖40%, 半分"
+        },
+        {
+          "point_id": "P4",
+          "description": "正确计算加速度 a=3m/s²",
+          "max_score": 2.0,
+          "earned": 2.0,
+          "verdict": "satisfied",
+          "reason": "教师判定: 关键字覆盖80%, 满分"
+        }
+      ],
+      "diff": 1.0,
+      "within_1": true
+    },
+    {
+      "item_id": "T1",
+      "item_title": "质量 m=2kg 的物体在水平面上受到 F=10N 的水平拉力，物体与地面间动摩擦因数 μ=0.2，取 g=10m/s²。求物体的加速度大小。",
+      "level": "weak",
+      "answer": "F=ma，所以 a=F/m=10/2=5m/s²。",
+      "engine_score": 2.0,
+      "engine_confidence": 0.7,
+      "engine_review_level": "forced",
+      "engine_point_results": [
+        {
+          "point_id": "P1",
+          "earned": 1.0,
+          "status": "partial",
+          "reason": "部分覆盖得分点要点(覆盖率 18%), 表述/前提不完整 | 未命中: 牛顿第二定律、F合=ma、合外力等于、ma"
+        },
+        {
+          "point_id": "P2",
+          "earned": 0.0,
+          "status": "unsatisfied",
+          "reason": "未覆盖得分点(正确计算摩擦力 f=μmg=4N)"
+        },
+        {
+          "point_id": "P3",
+          "earned": 0.0,
+          "status": "unsatisfied",
+          "reason": "未覆盖得分点(正确计算合外力 F合=F-f=6N)"
+        },
+        {
+          "point_id": "P4",
+          "earned": 1.0,
+          "status": "partial",
+          "reason": "部分覆盖得分点要点(覆盖率 12%), 表述/前提不完整 | 未命中: 加速度、3m/s、3 m/s、6/2"
+        }
+      ],
+      "teacher_score": 1.0,
+      "teacher_point_results": [
+        {
+          "point_id": "P1",
+          "description": "写出牛顿第二定律 F合=ma 或等价表述",
+          "max_score": 2.0,
+          "earned": 1.0,
+          "verdict": "partial",
+          "reason": "教师判定: 关键字覆盖40%, 半分"
+        },
+        {
+          "point_id": "P2",
+          "description": "正确计算摩擦力 f=μmg=4N",
+          "max_score": 2.0,
+          "earned": 0.0,
+          "verdict": "unsatisfied",
+          "reason": "教师判定: 关键字覆盖0%, 不得分"
+        },
+        {
+          "point_id": "P3",
+          "description": "正确计算合外力 F合=F-f=6N",
+          "max_score": 2.0,
+          "earned": 0.0,
+          "verdict": "unsatisfied",
+          "reason": "教师判定: 关键字覆盖0%, 不得分"
+        },
+        {
+          "point_id": "P4",
+          "description": "正确计算加速度 a=3m/s²",
+          "max_score": 2.0,
+          "earned": 0.0,
+          "verdict": "unsatisfied",
+          "reason": "教师判定: 关键字覆盖20%, 不得分"
+        }
+      ],
+      "diff": 1.0,
+      "within_1": true
+    },
+    {
+      "item_id": "T2",
+      "item_title": "简述什么是惯性，并说明惯性大小由什么决定，举一个生活中的例子。",
+      "level": "strong",
+      "answer": "惯性是物体保持原来运动状态不变的性质，不管是静止还是匀速直线运动都有惯性，它是物体本身的固有属性。惯性的大小只由质量决定，质量大的物体惯性大。比如公交车急刹车的时候，乘客的脚跟着车停了，但身体由于惯性还保持向前运动，所以会向前倾。",
+      "engine_score": 4.0,
+      "engine_confidence": 0.667,
+      "engine_review_level": "forced",
+      "engine_point_results": [
+        {
+          "point_id": "P1",
+          "earned": 2.0,
+          "status": "satisfied",
+          "reason": "覆盖得分点要点(覆盖率 100%)"
+        },
+        {
+          "point_id": "P2",
+          "earned": 1.0,
+          "status": "partial",
+          "reason": "部分覆盖得分点要点(覆盖率 78%), 表述/前提不完整 | 未命中: 越大"
+        },
+        {
+          "point_id": "P3",
+          "earned": 1.0,
+          "status": "partial",
+          "reason": "部分覆盖得分点要点(覆盖率 29%), 表述/前提不完整 | 未命中: 刹车、拍打、灰尘、例子、生活"
+        }
+      ],
+      "teacher_score": 5.0,
+      "teacher_point_results": [
+        {
+          "point_id": "P1",
+          "description": "正确表述惯性定义（保持原有运动状态的性质）",
+          "max_score": 2.0,
+          "earned": 2.0,
+          "verdict": "satisfied",
+          "reason": "教师判定: 关键字覆盖100%, 满分"
+        },
+        {
+          "point_id": "P2",
+          "description": "指出惯性大小由质量决定",
+          "max_score": 2.0,
+          "earned": 2.0,
+          "verdict": "satisfied",
+          "reason": "教师判定: 关键字覆盖75%, 满分"
+        },
+        {
+          "point_id": "P3",
+          "description": "举出合理的生活例子（如刹车前倾、拍打灰尘等）",
+          "max_score": 2.0,
+          "earned": 1.0,
+          "verdict": "partial",
+          "reason": "教师判定: 关键字覆盖43%, 半分"
+        }
+      ],
+      "diff": 1.0,
+      "within_1": true
+    },
+    {
+      "item_id": "T2",
+      "item_title": "简述什么是惯性，并说明惯性大小由什么决定，举一个生活中的例子。",
+      "level": "mid",
+      "answer": "惯性就是物体保持原来运动状态的性质。惯性大小和质量有关，质量越大惯性越大。比如坐车刹车时人会往前倒。",
+      "engine_score": 3.0,
+      "engine_confidence": 0.55,
+      "engine_review_level": "forced",
+      "engine_point_results": [
+        {
+          "point_id": "P1",
+          "earned": 1.0,
+          "status": "partial",
+          "reason": "部分覆盖得分点要点(覆盖率 50%), 表述/前提不完整 | 未命中: 静止、匀速、固有属性"
+        },
+        {
+          "point_id": "P2",
+          "earned": 1.0,
+          "status": "partial",
+          "reason": "部分覆盖得分点要点(覆盖率 44%), 表述/前提不完整 | 未命中: 决定、质量大"
+        },
+        {
+          "point_id": "P3",
+          "earned": 1.0,
+          "status": "partial",
+          "reason": "部分覆盖得分点要点(覆盖率 14%), 表述/前提不完整 | 未命中: 前倾、急刹、拍打、灰尘、例子"
+        }
+      ],
+      "teacher_score": 2.0,
+      "teacher_point_results": [
+        {
+          "point_id": "P1",
+          "description": "正确表述惯性定义（保持原有运动状态的性质）",
+          "max_score": 2.0,
+          "earned": 1.0,
+          "verdict": "partial",
+          "reason": "教师判定: 关键字覆盖50%, 半分"
+        },
+        {
+          "point_id": "P2",
+          "description": "指出惯性大小由质量决定",
+          "max_score": 2.0,
+          "earned": 1.0,
+          "verdict": "partial",
+          "reason": "教师判定: 关键字覆盖50%, 半分"
+        },
+        {
+          "point_id": "P3",
+          "description": "举出合理的生活例子（如刹车前倾、拍打灰尘等）",
+          "max_score": 2.0,
+          "earned": 0.0,
+          "verdict": "unsatisfied",
+          "reason": "教师判定: 关键字覆盖14%, 不得分"
+        }
+      ],
+      "diff": 1.0,
+      "within_1": true
+    },
+    {
+      "item_id": "T2",
+      "item_title": "简述什么是惯性，并说明惯性大小由什么决定，举一个生活中的例子。",
+      "level": "weak",
+      "answer": "惯性就是一种力，让物体动起来。比如推桌子的时候桌子很重。",
+      "engine_score": 1.0,
+      "engine_confidence": 0.75,
+      "engine_review_level": "sample",
+      "engine_point_results": [
+        {
+          "point_id": "P1",
+          "earned": 1.0,
+          "status": "partial",
+          "reason": "部分覆盖得分点要点(覆盖率 12%), 表述/前提不完整 | 未命中: 保持、运动状态、静止、匀速、固有属性"
+        },
+        {
+          "point_id": "P2",
+          "earned": 0.0,
+          "status": "unsatisfied",
+          "reason": "未覆盖得分点(指出惯性大小由质量决定)"
+        },
+        {
+          "point_id": "P3",
+          "earned": 0.0,
+          "status": "unsatisfied",
+          "reason": "未覆盖得分点(举出合理的生活例子（如刹车前倾、拍打灰尘等）)"
+        }
+      ],
+      "teacher_score": 0.0,
+      "teacher_point_results": [
+        {
+          "point_id": "P1",
+          "description": "正确表述惯性定义（保持原有运动状态的性质）",
+          "max_score": 2.0,
+          "earned": 0.0,
+          "verdict": "unsatisfied",
+          "reason": "教师判定: 关键字覆盖17%, 不得分"
+        },
+        {
+          "point_id": "P2",
+          "description": "指出惯性大小由质量决定",
+          "max_score": 2.0,
+          "earned": 0.0,
+          "verdict": "unsatisfied",
+          "reason": "教师判定: 关键字覆盖0%, 不得分"
+        },
+        {
+          "point_id": "P3",
+          "description": "举出合理的生活例子（如刹车前倾、拍打灰尘等）",
+          "max_score": 2.0,
+          "earned": 0.0,
+          "verdict": "unsatisfied",
+          "reason": "教师判定: 关键字覆盖0%, 不得分"
+        }
+      ],
+      "diff": 1.0,
+      "within_1": true
+    },
+    {
+      "item_id": "T3",
+      "item_title": "请陈述动能定理的内容、公式并举一个应用例子。（文字模拟口语转写结果）",
+      "level": "strong",
+      "answer": "动能定理说的是合外力对物体做的总功等于物体动能的变化量。公式是 W总=ΔEk=½mv²减去½mv₀的平方。举个例子，汽车刹车的时候，地面的摩擦力对汽车做负功，汽车的动能就逐渐减小，最后减到零就停下来了。",
+      "engine_score": 4.0,
+      "engine_confidence": 0.667,
+      "engine_review_level": "forced",
+      "engine_point_results": [
+        {
+          "point_id": "P1",
+          "earned": 1.0,
+          "status": "partial",
+          "reason": "部分覆盖得分点要点(覆盖率 60%), 表述/前提不完整 | 未命中: 做功、动能变化"
+        },
+        {
+          "point_id": "P2",
+          "earned": 1.0,
+          "status": "partial",
+          "reason": "部分覆盖得分点要点(覆盖率 45%), 表述/前提不完整 | 未命中: W=、1/2mv、动能变化"
+        },
+        {
+          "point_id": "P3",
+          "earned": 2.0,
+          "status": "satisfied",
+          "reason": "覆盖得分点要点(覆盖率 85%) | 未命中: 应用"
+        }
+      ],
+      "teacher_score": 5.0,
+      "teacher_point_results": [
+        {
+          "point_id": "P1",
+          "description": "正确表述动能定理内容（合外力做功等于动能变化）",
+          "max_score": 2.0,
+          "earned": 2.0,
+          "verdict": "satisfied",
+          "reason": "教师判定: 关键字覆盖60%, 满分"
+        },
+        {
+          "point_id": "P2",
+          "description": "写出公式 W=ΔEk 或 ½mv²−½mv₀²",
+          "max_score": 2.0,
+          "earned": 1.0,
+          "verdict": "partial",
+          "reason": "教师判定: 关键字覆盖50%, 半分"
+        },
+        {
+          "point_id": "P3",
+          "description": "举出合理应用例子",
+          "max_score": 2.0,
+          "earned": 2.0,
+          "verdict": "satisfied",
+          "reason": "教师判定: 关键字覆盖83%, 满分"
+        }
+      ],
+      "diff": 1.0,
+      "within_1": true
+    },
+    {
+      "item_id": "T3",
+      "item_title": "请陈述动能定理的内容、公式并举一个应用例子。（文字模拟口语转写结果）",
+      "level": "mid",
+      "answer": "动能定理就是合外力做功等于动能变化。公式是 W等于二分之一mv方减初动能。比如汽车刹车时摩擦力做功让车停下来。",
+      "engine_score": 4.0,
+      "engine_confidence": 0.667,
+      "engine_review_level": "forced",
+      "engine_point_results": [
+        {
+          "point_id": "P1",
+          "earned": 2.0,
+          "status": "satisfied",
+          "reason": "覆盖得分点要点(覆盖率 87%) | 未命中: 总功"
+        },
+        {
+          "point_id": "P2",
+          "earned": 1.0,
+          "status": "partial",
+          "reason": "部分覆盖得分点要点(覆盖率 30%), 表述/前提不完整 | 未命中: W=、ΔEk、½mv²、1/2mv"
+        },
+        {
+          "point_id": "P3",
+          "earned": 1.0,
+          "status": "partial",
+          "reason": "部分覆盖得分点要点(覆盖率 69%), 表述/前提不完整 | 未命中: 例子、应用"
+        }
+      ],
+      "teacher_score": 5.0,
+      "teacher_point_results": [
+        {
+          "point_id": "P1",
+          "description": "正确表述动能定理内容（合外力做功等于动能变化）",
+          "max_score": 2.0,
+          "earned": 2.0,
+          "verdict": "satisfied",
+          "reason": "教师判定: 关键字覆盖80%, 满分"
+        },
+        {
+          "point_id": "P2",
+          "description": "写出公式 W=ΔEk 或 ½mv²−½mv₀²",
+          "max_score": 2.0,
+          "earned": 1.0,
+          "verdict": "partial",
+          "reason": "教师判定: 关键字覆盖33%, 半分"
+        },
+        {
+          "point_id": "P3",
+          "description": "举出合理应用例子",
+          "max_score": 2.0,
+          "earned": 2.0,
+          "verdict": "satisfied",
+          "reason": "教师判定: 关键字覆盖67%, 满分"
+        }
+      ],
+      "diff": 1.0,
+      "within_1": true
+    },
+    {
+      "item_id": "T3",
+      "item_title": "请陈述动能定理的内容、公式并举一个应用例子。（文字模拟口语转写结果）",
+      "level": "weak",
+      "answer": "动能定理就是动能等于二分之一mv平方。比如一个球滚得越快动能越大。",
+      "engine_score": 1.0,
+      "engine_confidence": 0.75,
+      "engine_review_level": "sample",
+      "engine_point_results": [
+        {
+          "point_id": "P1",
+          "earned": 1.0,
+          "status": "partial",
+          "reason": "部分覆盖得分点要点(覆盖率 27%), 表述/前提不完整 | 未命中: 合外力、做功、动能变化、总功"
+        },
+        {
+          "point_id": "P2",
+          "earned": 0.0,
+          "status": "unsatisfied",
+          "reason": "未覆盖得分点(写出公式 W=ΔEk 或 ½mv²−½mv₀²)"
+        },
+        {
+          "point_id": "P3",
+          "earned": 0.0,
+          "status": "unsatisfied",
+          "reason": "未覆盖得分点(举出合理应用例子)"
+        }
+      ],
+      "teacher_score": 0.0,
+      "teacher_point_results": [
+        {
+          "point_id": "P1",
+          "description": "正确表述动能定理内容（合外力做功等于动能变化）",
+          "max_score": 2.0,
+          "earned": 0.0,
+          "verdict": "unsatisfied",
+          "reason": "教师判定: 关键字覆盖20%, 不得分"
+        },
+        {
+          "point_id": "P2",
+          "description": "写出公式 W=ΔEk 或 ½mv²−½mv₀²",
+          "max_score": 2.0,
+          "earned": 0.0,
+          "verdict": "unsatisfied",
+          "reason": "教师判定: 关键字覆盖0%, 不得分"
+        },
+        {
+          "point_id": "P3",
+          "description": "举出合理应用例子",
+          "max_score": 2.0,
+          "earned": 0.0,
+          "verdict": "unsatisfied",
+          "reason": "教师判定: 关键字覆盖0%, 不得分"
+        }
+      ],
+      "diff": 1.0,
+      "within_1": true
+    }
+  ]
+}

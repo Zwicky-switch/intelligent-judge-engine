@@ -20,7 +20,7 @@ from app.constants import (
 )
 from app.llm.json_llm import request_json
 from app.llm.prompts import SCORE_SYSTEM, subjective_user_prompt
-from app.parsers.text import coverage_ratio, quality_gate_text
+from app.parsers.text import coverage_ratio, slot_coverage_ratio, quality_gate_text
 
 logger = logging.getLogger(__name__)
 
@@ -44,22 +44,41 @@ def _verdict_from_ratio(ratio: float, desc: str, matched: set[str] | None = None
 
 
 def _judge_point(point: dict, text: str, idx: int) -> dict:
-    """本地确定性判点(小模型判别层)."""
+    """本地确定性判点(小模型判别层).
+
+    支持两种量规结构:
+    - 传统: point.keywords = [字符串...], 按字符串面覆盖率判点
+    - 语义槽(评分算法优化 v2): point.slots = [{label, keywords:[变体...]}...],
+      按"命中槽数/总槽数"判点, 槽内任一变体命中即覆盖, 消除同义变体膨胀分母缺陷
+    """
     keywords = point.get("keywords") or []
+    slots = point.get("slots") or []
     point_id = point.get("point_id") or f"P{idx + 1}"
     score = float(point.get("score", 0))
     desc = point.get("description") or ""
-    ratio, hits, matched = coverage_ratio(text, keywords)
+
+    if slots:
+        ratio, hits, matched = slot_coverage_ratio(text, slots)
+    else:
+        ratio, hits, matched = coverage_ratio(text, keywords)
     verdict, reason = _verdict_from_ratio(ratio, desc, matched)
 
     # 无法判断: 疑似引图作答/超纲符号, 证据不足不推断学生不会
-    if _REF_FIGURE_RE.search(text) and keywords:
+    if _REF_FIGURE_RE.search(text) and (keywords or slots):
         verdict = V_UNKNOWN
         reason = "作答疑似引用题目附图/外部图, 文本证据不足, 需人工复核"
 
-    missing = [k for k in (keywords or []) if k not in matched]
-    if missing and verdict in (V_SATISFIED, V_PARTIAL):
-        reason += " | 未命中: " + "、".join(missing[:5])
+    if slots:
+        miss_labels = [
+            s.get("label") for s in slots
+            if not any(kw in text for kw in (s.get("keywords") or []))
+        ]
+        if miss_labels and verdict in (V_SATISFIED, V_PARTIAL):
+            reason += " | 未覆盖: " + "、".join(miss_labels[:5])
+    else:
+        missing = [k for k in (keywords or []) if k not in matched]
+        if missing and verdict in (V_SATISFIED, V_PARTIAL):
+            reason += " | 未命中: " + "、".join(missing[:5])
 
     return {
         "point_id": point_id, "description": desc,

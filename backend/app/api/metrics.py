@@ -30,6 +30,47 @@ def _ratio(sc: Score) -> float | None:
     return None
 
 
+def _double_teacher_consistency(drecs: list[ReviewRecord]) -> dict:
+    """双评教师间一致性: 按 reviewed_by 区分教师, 覆盖三类边界.
+
+    - 同分: 两位不同教师给同分 -> 正常计入一致(diff=0 ≤ 容差);
+    - 同一教师重复操作: 同 reviewer 只取首次, 不把同一教师两次当两位独立分;
+    - 单题超过两次评阅: 只取前两位不同教师各自的首次独立分, 多余记录忽略。
+    """
+    per_score: dict[int, list[tuple[int | None, float]]] = {}
+    for rec in drecs:
+        if rec.new_score is None or rec.reviewed_by is None:
+            continue
+        per_score.setdefault(rec.score_id, []).append(
+            (rec.reviewed_by, float(rec.new_score)))
+    pairs = within1 = 0
+    diffs: list[float] = []
+    for recs in per_score.values():
+        chosen: list[tuple[int | None, float]] = []
+        seen: set[int | None] = set()
+        for tid, val in recs:          # 记录按 id 升序 = 按发生时间
+            if tid not in seen:
+                seen.add(tid)
+                chosen.append((tid, val))
+            if len(chosen) == 2:
+                break
+        if len(chosen) < 2:
+            continue                   # 需两位不同教师
+        v1, v2 = chosen[0][1], chosen[1][1]
+        pairs += 1
+        d = abs(v1 - v2)
+        diffs.append(d)
+        if d <= 1.0:
+            within1 += 1
+    return {
+        "pairs": pairs,
+        "within_1pt_rate": round(within1 / pairs, 3) if pairs else None,
+        "mean_abs_diff": round(sum(diffs) / pairs, 3) if pairs else None,
+        "method": "双评完成对: 按 reviewed_by 区分两位不同教师各自首次独立分, ±1 分容差一致率",
+        "note": "覆盖边界: 同分计入一致; 同一教师重复操作只取首次; 单题超两次只取前两位教师。未开启双评或尚无完成对时 pairs=0(如实上报)。",
+    }
+
+
 @router.get("/quality")
 def quality_metrics(course_id: int | None = Query(default=None),
                     cur: CurrentUser = Depends(require_roles(*VIEWERS)),
@@ -157,31 +198,11 @@ def quality_metrics(course_id: int | None = Query(default=None),
                                       {iid: (it.max_score if it else s.max_score)
                                        for iid, it in items.items()})
 
-    # ---- 双评教师间一致性(double_pass1 vs double_pass2, 两位不同教师独立分) ----
+    # ---- 双评教师间一致性(按 reviewed_by 区分教师, 覆盖三类边界) ----
     drecs = db.query(ReviewRecord).filter(
-        ReviewRecord.action.in_([ACT_DOUBLE_PASS1, ACT_DOUBLE_PASS2])).all()
-    pair_vals: dict[int, list[float]] = {}
-    for rec in drecs:
-        if rec.new_score is None:
-            continue
-        pair_vals.setdefault(rec.score_id, []).append(float(rec.new_score))
-    pairs = within1 = 0
-    diffs: list[float] = []
-    for _sid, vals in pair_vals.items():
-        if len(vals) < 2 or len(set(vals[:2])) < 2:
-            continue    # 需要来自两位不同教师的独立分
-        pairs += 1
-        d = abs(vals[0] - vals[1])
-        diffs.append(d)
-        if d <= 1.0:
-            within1 += 1
-    teacher_consistency = {
-        "pairs": pairs,
-        "within_1pt_rate": round(within1 / pairs, 3) if pairs else None,
-        "mean_abs_diff": round(sum(diffs) / pairs, 3) if pairs else None,
-        "method": "双评完成对: double_pass1 vs double_pass2 两位不同教师独立分, ±1 分容差一致率",
-        "note": "未开启双评或尚无完成对时 pairs=0(如实上报)。",
-    }
+        ReviewRecord.action.in_([ACT_DOUBLE_PASS1, ACT_DOUBLE_PASS2])
+    ).order_by(ReviewRecord.id).all()
+    teacher_consistency = _double_teacher_consistency(drecs)
 
     finalized = auto + reviewed
     return {

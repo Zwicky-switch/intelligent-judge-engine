@@ -1,0 +1,116 @@
+<html style="margin:0;padding:0;">
+<div style="background-color:transparent;box-sizing:border-box;font-family:'Roboto','PingFang SC','Segoe UI',Arial,sans-serif;color:#1A1B1C;line-height:1.5;padding:4px 2px;">
+
+  <!-- 标题 -->
+  <div style="font-size:16px;font-weight:600;margin:0 0 4px;color:#1A1B1C;">智评·Insight 从零到交付：经验全景</div>
+  <div style="font-size:12px;color:#6B7280;margin-bottom:14px;">问题 → 经验 → 技术 → 算法 | 全部数字为项目实测（2026-09-13）</div>
+
+  <!-- 四段式流程骨架 -->
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+    <div style="flex:1 1 150px;min-width:0;padding:10px 12px;background:linear-gradient(135deg,rgba(158,172,234,0.15),rgba(158,172,234,0.28));border-radius:12px;box-sizing:border-box;">
+      <div style="font-size:11px;color:#6B7280;">阶段一 · 环境依赖</div>
+      <div style="font-size:13px;font-weight:600;margin-top:2px;">HF超时 · RapidOCR误报<br>ASR锁版 · 路径注入</div>
+    </div>
+    <div style="flex:1 1 150px;min-width:0;padding:10px 12px;background:linear-gradient(135deg,rgba(201,167,232,0.15),rgba(201,167,232,0.28));border-radius:12px;box-sizing:border-box;">
+      <div style="font-size:11px;color:#6B7280;">阶段二 · 模型边界</div>
+      <div style="font-size:13px;font-weight:600;margin-top:2px;">Key过期 · glm-4.7无视觉<br>OCR公式错 · ASR符号错</div>
+    </div>
+    <div style="flex:1 1 150px;min-width:0;padding:10px 12px;background:linear-gradient(135deg,rgba(148,216,195,0.15),rgba(148,216,195,0.28));border-radius:12px;box-sizing:border-box;">
+      <div style="font-size:11px;color:#6B7280;">阶段三 · 算法设计</div>
+      <div style="font-size:13px;font-weight:600;margin-top:2px;">变体膨胀分母<br>语义槽算法v2</div>
+    </div>
+    <div style="flex:1 1 150px;min-width:0;padding:10px 12px;background:linear-gradient(135deg,rgba(139,200,234,0.15),rgba(139,200,234,0.28));border-radius:12px;box-sizing:border-box;">
+      <div style="font-size:11px;color:#6B7280;">阶段四 · 口径与部署</div>
+      <div style="font-size:13px;font-weight:600;margin-top:2px;">种子冒充 · 口径混乱<br>密钥清理 · WAL提速</div>
+    </div>
+  </div>
+
+  <!-- 最大坑：语义槽优化对比 -->
+  <div style="padding:12px;background:linear-gradient(135deg,rgba(148,216,195,0.1),rgba(148,216,195,0.22));border:0.5px solid rgba(0,0,0,0.08);border-radius:12px;margin-bottom:12px;box-sizing:border-box;">
+    <div style="font-size:13px;font-weight:600;margin-bottom:8px;">核心算法演进：字符面覆盖 → 语义槽覆盖（同一教师基准）</div>
+    <div style="display:flex;align-items:flex-end;gap:20px;flex-wrap:wrap;">
+      <div style="flex:1 1 200px;min-width:0;">
+        <div style="font-size:11px;color:#6B7280;margin-bottom:4px;">原引擎（字符覆盖率）</div>
+        <div style="display:flex;align-items:flex-end;gap:6px;">
+          <div style="flex:1;background:#EA6668;border-radius:6px 6px 0 0;height:11px;min-width:20px;" title="11.1%"></div>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:4px;">
+          <div style="flex:1;font-size:11px;color:#EA6668;font-weight:600;">一致率 11.1%</div>
+          <div style="flex:1;font-size:11px;color:#6B7280;">平均分差 2.56</div>
+        </div>
+      </div>
+      <div style="font-size:20px;color:#6B7280;">→</div>
+      <div style="flex:1 1 200px;min-width:0;">
+        <div style="font-size:11px;color:#6B7280;margin-bottom:4px;">优化后（语义槽）</div>
+        <div style="display:flex;align-items:flex-end;gap:6px;">
+          <div style="flex:1;background:#52C41A;border-radius:6px 6px 0 0;height:100px;min-width:20px;" title="100%"></div>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:4px;">
+          <div style="flex:1;font-size:11px;color:#52C41A;font-weight:600;">一致率 100%</div>
+          <div style="flex:1;font-size:11px;color:#6B7280;">平均分差 0.33</div>
+        </div>
+      </div>
+    </div>
+    <div style="font-size:11px;color:#6B7280;margin-top:8px;">根因：同义变体越多分母越大，学生只写一种表达时命中占比低，强档答案反被判半分。语义槽=分组命中，贴近教师逐知识点判断。</div>
+  </div>
+
+  <!-- 多模态量化成果 -->
+  <div style="padding:12px;background:linear-gradient(135deg,rgba(158,172,234,0.1),rgba(158,172,234,0.22));border:0.5px solid rgba(0,0,0,0.08);border-radius:12px;box-sizing:border-box;">
+    <div style="font-size:13px;font-weight:600;margin-bottom:10px;">多模态真实素材验证（量化成果）</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <div style="flex:1 1 140px;min-width:0;padding:10px;background:rgba(255,255,255,0.6);border-radius:10px;box-sizing:border-box;">
+        <div style="font-size:20px;font-weight:600;color:#1A1B1C;">24.06%</div>
+        <div style="font-size:11px;color:#6B7280;margin-top:2px;">OCR 加权 CER<br>4张真实手写图 · glm-4v-flash</div>
+      </div>
+      <div style="flex:1 1 140px;min-width:0;padding:10px;background:rgba(255,255,255,0.6);border-radius:10px;box-sizing:border-box;">
+        <div style="font-size:20px;font-weight:600;color:#1A1B1C;">7.29% / 16.95%</div>
+        <div style="font-size:11px;color:#6B7280;margin-top:2px;">ASR CER / WER<br>5段真实素材 · AI校对真值</div>
+      </div>
+      <div style="flex:1 1 140px;min-width:0;padding:10px;background:rgba(255,255,255,0.6);border-radius:10px;box-sizing:border-box;">
+        <div style="font-size:20px;font-weight:600;color:#1A1B1C;">19.7ms</div>
+        <div style="font-size:11px;color:#6B7280;margin-top:2px;">端到端响应 p95<br>文本提交 · SQLite WAL</div>
+      </div>
+      <div style="flex:1 1 140px;min-width:0;padding:10px;background:rgba(255,255,255,0.6);border-radius:10px;box-sizing:border-box;">
+        <div style="font-size:20px;font-weight:600;color:#1A1B1C;">91 passed</div>
+        <div style="font-size:11px;color:#6B7280;margin-top:2px;">自动化测试<br>全程无回归</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 技术栈 -->
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
+    <div style="flex:1 1 130px;min-width:0;padding:10px 12px;background:rgba(0,0,0,0.025);border:1px solid rgba(0,0,0,0.08);border-radius:12px;box-sizing:border-box;">
+      <div style="font-size:11px;font-weight:600;color:#6B7280;">前端</div>
+      <div style="font-size:12px;margin-top:4px;">Vue3 · Element Plus<br>ECharts按需 · 路由懒加载<br>manualChunks · 图标按需</div>
+    </div>
+    <div style="flex:1 1 130px;min-width:0;padding:10px 12px;background:rgba(0,0,0,0.025);border:1px solid rgba(0,0,0,0.08);border-radius:12px;box-sizing:border-box;">
+      <div style="font-size:11px;font-weight:600;color:#6B7280;">后端</div>
+      <div style="font-size:12px;margin-top:4px;">FastAPI · SQLite WAL<br>确定性判分 · 置信度路由<br>双评仲裁 · 证据落库</div>
+    </div>
+    <div style="flex:1 1 130px;min-width:0;padding:10px 12px;background:rgba(0,0,0,0.025);border:1px solid rgba(0,0,0,0.08);border-radius:12px;box-sizing:border-box;">
+      <div style="font-size:11px;font-weight:600;color:#6B7280;">多模态</div>
+      <div style="font-size:12px;margin-top:4px;">glm-4v-flash OCR<br>faster-whisper ASR<br>RapidOCR 离线兜底</div>
+    </div>
+    <div style="flex:1 1 130px;min-width:0;padding:10px 12px;background:rgba(0,0,0,0.025);border:1px solid rgba(0,0,0,0.08);border-radius:12px;box-sizing:border-box;">
+      <div style="font-size:11px;font-weight:600;color:#6B7280;">诊断</div>
+      <div style="font-size:12px;margin-top:4px;">Q矩阵 60维<br>BKT时序 · IRT能力值<br>画像匹配 profile_match</div>
+    </div>
+  </div>
+
+  <!-- 十大经验 -->
+  <div style="margin-top:14px;padding:12px;background:rgba(0,0,0,0.025);border:1px solid rgba(0,0,0,0.08);border-radius:12px;box-sizing:border-box;">
+    <div style="font-size:13px;font-weight:600;margin-bottom:8px;">十大经验之坑（节选）</div>
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      <div style="font-size:12px;"><span style="color:#9EACEA;font-weight:700;">1</span> 模型能力用真实调用验证——glm-4.7 无视觉，一次调用即暴露</div>
+      <div style="font-size:12px;"><span style="color:#9EACEA;font-weight:700;">2</span> 评分算法分母设计小心——同义变体膨胀惩罚正确学生</div>
+      <div style="font-size:12px;"><span style="color:#9EACEA;font-weight:700;">3</span> 种子数据与真实数据严格隔离——预置账号操作≠教师评分</div>
+      <div style="font-size:12px;"><span style="color:#9EACEA;font-weight:700;">4</span> 量化指标先定口径——引擎 0.12ms ≠ 端到端 19.7ms</div>
+      <div style="font-size:12px;"><span style="color:#9EACEA;font-weight:700;">5</span> OCR/ASR 公式符号是最弱环节——等号/上标/符号被吞</div>
+      <div style="font-size:12px;"><span style="color:#9EACEA;font-weight:700;">6</span> 真值集不一定要等真人——AI 校对代理真值可快速量化</div>
+    </div>
+  </div>
+
+  <div style="font-size:11px;color:#6B7280;margin-top:10px;">完整内容见 <code>docs/项目总结_经验与技术_20260913.md</code>。图为自绘结构示意，数据均来自项目实测。</div>
+
+</div>
+</html>

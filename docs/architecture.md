@@ -78,7 +78,8 @@ backend FastAPI
 - 姿态识别/动作时序对齐未接入——动作类步骤最终分以教师人工评定为准(强制复核兜底)。
 
 ### 3.4b 图片作答(`parsers/image_ocr.py` · 视觉模型 + RapidOCR 兜底)
-- `POST /answers/image`：视觉多模态模型(智谱 glm-4v-flash 已配 / 通义 qwen-vl-plus / 自定义)优先提取图片文字；未配置或调用失败自动回退本地 **RapidOCR**(离线)；两者都不可用才 422。
+- `POST /answers/image`：视觉多模态模型(智谱 glm-4v-flash 适配代码就绪 / 通义 qwen-vl-plus / 自定义)优先提取图片文字；未配置或调用失败自动回退本地 **RapidOCR**(离线)；两者都不可用才 422。
+- **[实测 2026-09-13]** 有效智谱 Key + glm-4v-flash 对 4 张真实学生手写图片全部识别成功，平均 CER 21.91% / 加权 24.06%(正文识别良好、公式域符号误差为主)；评估脚本与真值见 `scripts/ocr_eval/`。glm-4.7 为纯文本模型(不支持图片输入, 返回 1210)，评阅判分用 glm-4.7、OCR 用 glm-4v-flash 双模型分工。**交付版不含真实 Key**，本地运行需在 `.env` 填入有效 Key 或回退 RapidOCR 离线识别。
 - 识别文本作 `content` 落库并走主观题判分引擎，原图存 `content_uri` 作为证据；低质量识别经质量门控/强制复核兜底。
 
 ### 3.5 公式题(`engines/symbolic.py` · 确定性·幂等)
@@ -150,7 +151,7 @@ backend FastAPI
 |---|---|---|
 | 命题教师 | 题库管理 / 题目编辑器(量规模板·双评·双人发布)/ 知识图谱·维度·课程维度开关 | `/items*` `/rubric-templates` `/courses` `/dimensions` `/courses/{id}/dimensions` |
 | 阅卷教师(A/B) | 复核中心(含双评阶段)/ 评阅工作台 | `/reviews/queue` `/reviews/{id}` `/scores/{id}` |
-| 教务管理员 | 质量看板(延迟/守门/一致率/校准)/ 审计日志 | `/metrics/quality` `/audit`(另具命题/复核权) |
+| 教务管理员 | 质量看板(引擎内部时延/存量分数重放一致率/一致率/校准)/ 审计日志 | `/metrics/quality` `/audit`(另具命题/复核权) |
 | 学生 | 我的成绩 / 自主练习(主观·公式·口语转写+录音)/ 诊断报告(60维·BKT·热力·匹配度) | `/scores/overview/{token}` `/practice/items` `/answers` `/diagnosis/mine/current` |
 
 OpenAPI 交互文档：启动后端后访问 `http://127.0.0.1:8000/docs`。

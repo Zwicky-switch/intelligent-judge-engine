@@ -5,6 +5,7 @@
 """
 from __future__ import annotations
 
+import logging
 from contextlib import contextmanager
 from typing import Iterator
 
@@ -12,6 +13,8 @@ from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class Base(DeclarativeBase):
@@ -30,11 +33,37 @@ def _make_engine():
 
             kwargs["poolclass"] = StaticPool
             kwargs["connect_args"] = {"check_same_thread": False}
+        else:
+            # 文件库: 启用 WAL 模式提升并发读写性能(写不阻塞读),
+            # 并设置合理的连接池大小与回收超时。
+            kwargs["pool_size"] = 10
+            kwargs["max_overflow"] = 20
+            kwargs["pool_recycle"] = 1800
     return create_engine(url, **kwargs)
 
 
 engine = _make_engine()
 SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
+
+
+def _enable_sqlite_wal() -> None:
+    """对文件型 SQLite 启用 WAL(Write-Ahead Logging) 模式.
+
+    WAL 允许多读单写并发, 显著提升高并发下的读性能; 对单写多读的
+    评阅场景(提交写 + 看板/列表读)效果明显。内存库跳过。
+    """
+    url = settings.DATABASE_URL
+    if not url.startswith("sqlite") or ":memory:" in url:
+        return
+    try:
+        with engine.begin() as conn:
+            conn.execute(text("PRAGMA journal_mode=WAL"))
+            conn.execute(text("PRAGMA synchronous=NORMAL"))
+            conn.execute(text("PRAGMA temp_store=MEMORY"))
+            conn.execute(text("PRAGMA cache_size=-20000"))  # 20MB 页缓存
+        logger.info("SQLite WAL 模式已启用")
+    except Exception:  # noqa: BLE001
+        logger.warning("SQLite WAL 启用失败, 回退默认模式", exc_info=True)
 
 
 def _ensure_columns() -> None:
@@ -65,6 +94,7 @@ def init_db() -> None:
     """建表(幂等). 需要先 import 所有 model 以注册到 Base.metadata."""
     from app import models  # noqa: F401  (注册表)
 
+    _enable_sqlite_wal()
     Base.metadata.create_all(bind=engine)
     _ensure_columns()
 

@@ -22,9 +22,9 @@
       <div class="stat-grid health">
         <div class="stat-card"><div class="lbl">平均判分耗时</div><div class="num small-num">{{ fmtMs(lat.avg) }}</div></div>
         <div class="stat-card"><div class="lbl">P95 判分耗时</div><div class="num small-num">{{ fmtMs(lat.p95) }}</div></div>
-        <div class="stat-card"><div class="lbl">客观题守门准确率</div>
+        <div class="stat-card"><div class="lbl">存量分数重放一致率</div>
           <div class="num" :style="{ color: guardColor }">{{ fmtPct(guard.accuracy) }}</div>
-          <div class="lbl" style="font-size:11px">守门 {{ guard.checked ?? 0 }} · 误差 {{ guard.misgraded ?? 0 }}</div>
+          <div class="lbl" style="font-size:11px">重放样本 {{ guard.checked ?? 0 }} · 不一致 {{ guard.misgraded ?? 0 }}</div>
         </div>
         <div class="stat-card"><div class="lbl">引擎↔教师 ±1分一致率</div><div class="num" style="color:#18a058">{{ fmtPct(consistency.overall) }}</div>
           <div class="lbl" style="font-size:11px">样本 {{ consistency.n ?? 0 }}</div>
@@ -96,7 +96,7 @@
       </el-col>
       <el-col :xs="24" :md="12">
         <div class="card">
-          <div class="block-title">延迟与客观题确定性守门</div>
+          <div class="block-title">延迟与客观题存量重放</div>
           <el-descriptions :column="2" size="small" border>
             <el-descriptions-item label="平均耗时">{{ fmtMs(lat.avg) }}</el-descriptions-item>
             <el-descriptions-item label="P95">{{ fmtMs(lat.p95) }}</el-descriptions-item>
@@ -105,7 +105,7 @@
           </el-descriptions>
           <div class="guard-box" :class="guardClass">
             <div class="guard-head">
-              <span>客观题守门重放</span>
+              <span>客观题存量重放</span>
               <b :style="{ color: guardColor }">{{ fmtPct(guard.accuracy) }}</b>
             </div>
             <p class="small-text">已核对 <b>{{ guard.checked ?? 0 }}</b> 份自动放行客观分, 重放判分与存量总分不一致 <b>{{ guard.misgraded ?? 0 }}</b> 份。</p>

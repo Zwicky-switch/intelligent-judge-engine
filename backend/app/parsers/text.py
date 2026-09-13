@@ -62,6 +62,38 @@ def coverage_ratio(text: str, keywords: list[str]) -> tuple[float, list[dict], s
     return min(ratio, 1.0), hits, matched
 
 
+def slot_coverage_ratio(text: str, slots: list[dict]) -> tuple[float, list[dict], set[str]]:
+    """语义槽覆盖度(评分算法优化 v2).
+
+    语义槽 = 同义变体分组: 每个槽内任一关键字命中即算该槽覆盖。
+    覆盖度 = 命中槽数 / 总槽数。
+    相比字符串面覆盖率, 消除了"同义变体越多分母越大、单种写法命中占比低"的缺陷,
+    更贴近教师逐知识点判断的评分逻辑。
+
+    返回 (覆盖比例0-1, 命中区间(槽内首个命中关键字定位), 命中关键字集合)
+    """
+    if not slots:
+        return 0.0, [], set()
+    hit_hits: list[dict] = []
+    for s in slots:
+        kws = s.get("keywords") or []
+        for kw in kws:
+            kw = str(kw).strip()
+            if not kw:
+                continue
+            pos = text.find(kw)
+            if pos >= 0:
+                hit_hits.append({
+                    "start": pos, "end": pos + len(kw),
+                    "snippet": text[pos:pos + len(kw)],
+                    "keyword": kw, "slot": s.get("label", ""),
+                })
+                break  # 槽内任一命中即覆盖, 取首个
+    ratio = len(hit_hits) / len(slots) if slots else 0.0
+    matched = {h["keyword"] for h in hit_hits}
+    return min(ratio, 1.0), hit_hits, matched
+
+
 def quality_gate_text(text: str, *, item_type: str | None = None) -> dict:
     """质量门控: 空/过短/过长 -> 拒评转人工, 不静默判零.
 

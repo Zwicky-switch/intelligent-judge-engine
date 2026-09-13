@@ -2,9 +2,10 @@
 from __future__ import annotations
 
 import logging
+import time
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
@@ -13,6 +14,7 @@ from app.db import SessionLocal, init_db
 from app.llm.base import normalize_provider
 
 logger = logging.getLogger("app")
+
 
 
 def _auto_init() -> None:
@@ -51,6 +53,22 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    @app.middleware("http")
+    async def request_timing_middleware(request: Request, call_next):
+        """端到端请求耗时中间件: 记录含 HTTP/上传/ASR/OCR/持久化的全链路耗时.
+
+        引擎内部 elapsed_ms 仅含判分逻辑; 本中间件补齐端到端口径,
+        便于定位真实用户感知延迟的瓶颈(上传/ASR/OCR vs 引擎本身)。
+        """
+        start = time.perf_counter()
+        response = await call_next(request)
+        elapsed_ms = (time.perf_counter() - start) * 1000.0
+        response.headers["X-Response-Time-ms"] = f"{elapsed_ms:.2f}"
+        # 慢请求(>1s)记录到日志, 便于排查
+        if elapsed_ms > 1000:
+            logger.info("慢请求 %s %s -> %.0fms", request.method, request.url.path, elapsed_ms)
+        return response
 
     from app.api import (
         answers, assessments, audit, auth, courses, diagnosis, items,

@@ -22,7 +22,7 @@
         <div class="crumb">{{ currentTitle }}</div>
         <div class="right">
           <div v-if="meta" class="tech-pill" :title="meta.note">
-            <span class="dot" :class="{ online: isExternalProvider(meta.llm_provider) && meta.has_api_key }"></span>
+            <span class="dot" :class="{ online: isExternalProvider(meta.llm_provider) }"></span>
             <span class="tp-name">{{ providerLabel }}</span>
             <span class="tp-model">{{ meta.model_version || '—' }}</span>
           </div>

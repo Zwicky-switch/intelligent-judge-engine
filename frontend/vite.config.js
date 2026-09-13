@@ -19,4 +19,17 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    // 生产构建: 拆分大依赖到独立 chunk, 利用浏览器并行下载与长效缓存
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-vue': ['vue', 'vue-router', 'pinia'],
+          'vendor-element': ['element-plus', '@element-plus/icons-vue'],
+          // ECharts 已在 EChart.vue 中按需引入, 此处不再单独拆(避免重复打包)
+        },
+      },
+    },
+    chunkSizeWarningLimit: 800,
+  },
 })

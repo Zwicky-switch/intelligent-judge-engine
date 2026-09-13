@@ -4,7 +4,22 @@
 
 <script setup>
 import { onMounted, onBeforeUnmount, ref, watch, nextTick } from 'vue'
-import * as echarts from 'echarts'
+// ECharts 按需引入: 仅注册项目实际使用的图表类型与组件,
+// 相比 import * as echarts 全量引入可减少约 60% 打包体积。
+import * as echarts from 'echarts/core'
+import { BarChart, RadarChart, HeatmapChart } from 'echarts/charts'
+import {
+  GridComponent, TooltipComponent, LegendComponent,
+  RadarComponent, VisualMapComponent, TitleComponent,
+} from 'echarts/components'
+import { CanvasRenderer } from 'echarts/renderers'
+
+echarts.use([
+  BarChart, RadarChart, HeatmapChart,
+  GridComponent, TooltipComponent, LegendComponent,
+  RadarComponent, VisualMapComponent, TitleComponent,
+  CanvasRenderer,
+])
 
 const props = defineProps({
   option: { type: Object, required: true },
